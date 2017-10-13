@@ -6,7 +6,7 @@ A major mode for editing alan files. It provides:
 - Automatic indentation.
 - Flycheck integration.
 
-To setup up flycheck integration add the following snippit to your init.
+To setup up flycheck integration add the following snippet to your init.
 
 ```Emacs Lisp
 (add-hook 'alan-fabric-mode-hook
