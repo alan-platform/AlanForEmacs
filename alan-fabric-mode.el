@@ -322,13 +322,13 @@ then on this works fine."
   :command ("fabric" "validate" "emacs" )
   :error-patterns
   (
-   (error line-start (file-name) ":" line ":" column ": error:"
+   (error line-start (file-name) ":" line ":" column ": error:" (zero-or-one " " (one-or-more digit) ":" (one-or-more digit)) "\n"
    		  ;; Messages start with a white space after the error.
-   		  (message (zero-or-more not-newline)
+   		  (message " " (zero-or-more not-newline)
    				   (zero-or-more "\n " (zero-or-more not-newline)))
    		  line-end)
-   (warning line-start (file-name) ":" line ":" column ": warning: " (one-or-more digit) ":" (one-or-more digit)
-   		  (message (zero-or-more not-newline)
+   (warning line-start (file-name) ":" line ":" column ": warning:" (zero-or-one " " (one-or-more digit) ":" (one-or-more digit)) "\n"
+   		  (message " " (zero-or-more not-newline)
    				   (zero-or-more "\n " (zero-or-more not-newline)))
    		  line-end)
    )
