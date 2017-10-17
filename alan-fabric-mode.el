@@ -317,24 +317,20 @@ then on this works fine."
 	(when new-indent
 	  (indent-line-to new-indent))))
 
-(flycheck-define-checker alan-fabric-compiler
-  "The compiler for alan."
+(flycheck-define-checker alan-fabric-validator
+  "The fabric validator."
   :command ("fabric" "validate" "emacs" )
   :error-patterns
   (
-   (error line-start (file-name) ":" line ":" column ": error:" (zero-or-one " " (one-or-more digit) ":" (one-or-more digit)) "\n"
-   		  ;; Messages start with a white space after the error.
-   		  (message " " (zero-or-more not-newline)
-   				   (zero-or-more "\n " (zero-or-more not-newline)))
-   		  line-end)
-   (warning line-start (file-name) ":" line ":" column ": warning:" (zero-or-one " " (one-or-more digit) ":" (one-or-more digit)) "\n"
-   		  (message " " (zero-or-more not-newline)
-   				   (zero-or-more "\n " (zero-or-more not-newline)))
-   		  line-end)
+   ;; Messages start with a white space after the error/warning.
+   (error line-start (file-name) ":" line ":" column ": error:" (optional " " (one-or-more digit) ":" (one-or-more digit)) "\n" 
+   		  (message (one-or-more " " (one-or-more not-newline) "\n")))
+   (warning line-start (file-name) ":" line ":" column ": warning:" (optional " " (one-or-more digit) ":" (one-or-more digit)) "\n"
+   		  (message (one-or-more " " (one-or-more not-newline) "\n")))
    )
   :modes (alan-fabric-mode)
 )
-(add-to-list 'flycheck-checkers 'alan-fabric-compiler)
+(add-to-list 'flycheck-checkers 'alan-fabric-validator)
 
 (defun alan-font-lock-syntactic-face-function (state)
   "Do not fontify single quoted strings."
