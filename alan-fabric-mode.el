@@ -1,16 +1,24 @@
-;;; alan-fabric-mode.el Major mode for editing M-industries alan files
-;; This package adds support for editing alan fabric files.
+;;; alan-fabric-mode.el --- The major mode for editing M-industries alan fabric files.
+
+;; Copyright (C) 2017 M-industries
 
 ;; Author: Paul van Dam <pvandam@m-industries.com>
+;; Maintainer: Paul van Dam <pvandam@m-industries.com>
+;; Created: 13 October 2017
 ;; URL: https://github.com/M-industries/FabricForEmacs
+;; Homepage: https://www.m-industries.com/
 ;; Keywords: alan fabric
+;; Package-Requires: ((Flycheck "27") (emacs "24.3"))
 
 ;; This file is not part of GNU Emacs.
 
-;;; Code
+;;; Commentary:
+;;
 
 (require 'flycheck)
 (require 'timer)
+
+;;; Code:
 
 (defvar alan-fabric-mode-syntax-table
   (let ((alan-fabric-mode-syntax-table (make-syntax-table)))
@@ -23,7 +31,7 @@
 	(modify-syntax-entry ?\] "_" alan-fabric-mode-syntax-table)
 	(modify-syntax-entry ?\[ "_" alan-fabric-mode-syntax-table)
 	alan-fabric-mode-syntax-table)
-  "Syntax table for alan-fabric-mode")
+  "Syntax table for ‘alan-fabric-mode’.")
 
 (defconst alan-fabric-mode-font-lock-keywords
   `(
@@ -185,14 +193,14 @@
 	  )
 	nil nil nil nil
 	(font-lock-syntactic-face-function . alan-font-lock-syntactic-face-function))
-  "Highlighting for alan mode")
+  "Highlighting for alan mode.")
 
 (defvar alan-parent-regexp "\\s-*\\('[^']*?'\\)")
 
 (defvar-local alan-update-headline-timer nil)
 
 (defun alan-has-parent ()
-  "Returns point of parent or nil otherwise"
+  "Return point of parent or nil otherwise."
   (save-excursion
 	(defvar line-to-ignore-regex "^\\s-*\\(//.*\\)?$")
 	(move-beginning-of-line 1)
@@ -231,7 +239,7 @@
 	  )))
 
 (defun alan-goto-parent ()
-  "Goto the parent of this property"
+  "Goto the parent of this property."
   (interactive)
   (let ((parent-position (alan-has-parent)))
 	(when (alan-has-parent)
@@ -239,8 +247,8 @@
 		(goto-char parent-position))))
 
 (defun alan-copy-path-to-clipboard ()
-  "Copies the path to the clipboard. Usefull for writing long
-paths."
+  "Copies the path to the clipboard.
+Usefull for writing long paths."
   (interactive)
   (let ((path (alan-path)))
 	(when path
@@ -266,9 +274,9 @@ E.g. 'views' . 'queries' . 'context' . 'candidates' . 'of'"
   )
 
 (defun alan-fabric-mode-indent-line ()
-  "Indentation based mostly on parens. Sometimes you want to
-insert a tab manually to fix top level indentations. But from
-then on this works fine."
+  "Indentation based mostly on parens.
+Sometimes you want to insert a tab manually to fix top level
+indentations.  But from then on this works fine."
   (interactive)
   (let (new-indent)
 	(save-excursion
@@ -323,7 +331,7 @@ then on this works fine."
   :error-patterns
   (
    ;; Messages start with a white space after the error/warning.
-   (error line-start (file-name) ":" line ":" column ": error:" (optional " " (one-or-more digit) ":" (one-or-more digit)) "\n" 
+   (error line-start (file-name) ":" line ":" column ": error:" (optional " " (one-or-more digit) ":" (one-or-more digit)) "\n"
    		  (message (one-or-more " " (one-or-more not-newline) "\n")))
    (warning line-start (file-name) ":" line ":" column ": warning:" (optional " " (one-or-more digit) ":" (one-or-more digit)) "\n"
    		  (message (one-or-more " " (one-or-more not-newline) "\n")))
@@ -333,7 +341,8 @@ then on this works fine."
 (add-to-list 'flycheck-checkers 'alan-fabric-validator)
 
 (defun alan-font-lock-syntactic-face-function (state)
-  "Do not fontify single quoted strings."
+  "Do not fontify single quoted strings.
+This function gets a STATE that is the result of 'parse-partial-sexp'."
   (if (nth 3 state)
       (let ((startpos (nth 8 state)))
         (if (eq (char-after startpos) ?')
@@ -344,6 +353,7 @@ then on this works fine."
     font-lock-comment-face))
 
 (defun alan-schedule-timer ()
+  "Delay updating the header line."
   (when (timerp alan-update-headline-timer)
 	(cancel-timer alan-update-headline-timer))
   (setq alan-update-headline-timer (run-with-idle-timer
