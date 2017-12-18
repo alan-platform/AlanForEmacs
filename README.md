@@ -1,4 +1,4 @@
-# FabricForEmacs
+# Alan For Emacs
 
 A major mode for editing alan files. It provides:
 - Syntax highlighting.
