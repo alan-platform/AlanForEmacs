@@ -211,7 +211,7 @@ Not suitable for white space significant languages."
 				   (current-indentation))))
 			(if (looking-at "\\s-*\\s)") ;; looking at closing paren.
 				(setq new-indent parent-indent)
-			  (setq new-indent ( + parent-indent default-tab-width)))))
+			  (setq new-indent ( + parent-indent tab-width)))))
 		 (previous-line-indentation
 		  (setq new-indent previous-line-indentation)))
 		;; check for single block and add a level of indentation.
@@ -220,8 +220,8 @@ Not suitable for white space significant languages."
 		  (if (and (looking-at "\\s(")
 				   (eq (line-number-at-pos)
 					   (progn (forward-sexp) (line-number-at-pos))))
-			  (setq new-indent (min (if previous-line-indentation (+ previous-line-indentation default-tab-width) default-tab-width )
-									(+ new-indent default-tab-width)))))))
+			  (setq new-indent (min (if previous-line-indentation (+ previous-line-indentation tab-width) tab-width )
+									(+ new-indent tab-width)))))))
 	(when new-indent
 	  (indent-line-to new-indent))))
 
@@ -450,8 +450,8 @@ Not suitable for white space significant languages."
 										(save-excursion
 										  (forward-line -1)
 										  (current-indentation))))
-			(min-indentation (if parent-position (+ parent-indent default-tab-width) 0))
-			(max-indentation (+ previous-line-indentation default-tab-width)))
+			(min-indentation (if parent-position (+ parent-indent tab-width) 0))
+			(max-indentation (+ previous-line-indentation tab-width)))
 		(cond
 		 ((and parent-position (looking-at "\\s-*\\s)"))
 		  (setq new-indent parent-indent))
@@ -462,7 +462,7 @@ Not suitable for white space significant languages."
 		 ((> current-indent max-indentation)
 		  (setq new-indent max-indentation))
 		 ((<= current-indent max-indentation)
-		  (setq new-indent (- current-indent default-tab-width))))))
+		  (setq new-indent (- current-indent tab-width))))))
  	(when new-indent
  	  (indent-line-to new-indent))))
 
