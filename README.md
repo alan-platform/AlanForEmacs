@@ -1,22 +1,17 @@
 # Alan For Emacs
 
-A major mode for editing alan files. It provides:
+A major mode for editing Alan files. It provides:
 - Syntax highlighting.
 - Display the current context (path) at point.
 - Automatic indentation.
 - Flycheck integration.
+- Simple xref backend.
 
 ## Installation
 
-Put alan-fabric-mode.el in your load-path.
+Put alan-mode.el in your load-path.
 
-To associate the mode with alan file add this to your init.
-
-```Emacs Lisp
-(add-to-list `auto-mode-alist '("\\.alan" . alan-fabric-mode))
-```
-
-To setup up flycheck integration add the following snippet to your init.
+To setup up FlyCheck integration add the following snippet to your init.
 
 ```Emacs Lisp
 (add-hook 'alan-fabric-mode-hook
