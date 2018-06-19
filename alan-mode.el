@@ -271,18 +271,18 @@ Not suitable for white space significant languages."
 					(not (string= (flycheck-error-filename error) (buffer-file-name)))))
 			  error-list))
 
-(flycheck-define-checker alan-compiler
-  "The compiler for alan."
+(flycheck-define-checker alan
+  "An Alan syntax checker."
   :command ("compiler-project"
-			(eval alan-language-definition)
-			"--format" "emacs" "--log" "warning" "/dev/null" )
-  :predicate (lambda () (and alan-language-definition (file-exists-p alan-language-definition)))
+			(eval (if (null alan-language-definition)
+					'("validate" "emacs")
+					`(,alan-language-definition "--format" "emacs" "--log" "warning" "/dev/null"))))
   :error-patterns
   ((error line-start (file-name) ":" line ":" column ": error:"
-   		  ;; Messages start with a white space after the error.
-   		  (message (zero-or-more not-newline)
-   				   (zero-or-more "\n " (zero-or-more not-newline)))
-   		  line-end)
+		  ;; Messages start with a white space after the error.
+		  (message (zero-or-more not-newline)
+				   (zero-or-more "\n " (zero-or-more not-newline)))
+		  line-end)
    (warning line-start (file-name) ":" line ":" column ": warning: " (one-or-more digit) ":" (one-or-more digit)
 			(message (zero-or-more not-newline)
 					 (zero-or-more "\n " (zero-or-more not-newline)))
@@ -291,27 +291,11 @@ Not suitable for white space significant languages."
   :modes (alan-mode
 		  alan-schema-mode
 		  alan-grammar-mode
-		  alan-template-mode))
-(add-to-list 'flycheck-checkers 'alan-compiler)
-
-(flycheck-define-checker alan-script
-  "The compiler for alan."
-  :command ("alan" "validate" "emacs")
-  :error-patterns
-  ((error line-start (file-name) ":" line ":" column ": error:"
-   		  ;; Messages start with a white space after the error.
-   		  (message (zero-or-more not-newline)
-   				   (zero-or-more "\n " (zero-or-more not-newline)))
-   		  line-end)
-   (warning line-start (file-name) ":" line ":" column ": warning: " (one-or-more digit) ":" (one-or-more digit)
-			(message (zero-or-more not-newline)
-					 (zero-or-more "\n " (zero-or-more not-newline)))
-			line-end))
-  :error-filter alan-flycheck-error-filter
-  :modes (alan-application-mode
+		  alan-template-mode
+		  alan-application-mode
 		  alan-widget-implementation-mode
 		  alan-annotations-mode))
-(add-to-list 'flycheck-checkers 'alan-script)
+(add-to-list 'flycheck-checkers 'alan)
 
 ;;; Project root
 
@@ -344,17 +328,17 @@ Not suitable for white space significant languages."
 	(cond
 	 ((file-executable-p alan-project-script)
 	   (setq alan-script alan-project-script)
-	   (flycheck-set-checker-executable 'alan-script alan-script))
+	   (flycheck-set-checker-executable 'alan alan-script))
 	 ((file-executable-p alan-project-compiler)
 	  (setq alan-compiler alan-project-compiler)
-	  (setq alan-language-definition (concat (alan-project-root) "dependencies/dev/internals/alan/language"))
-	  (flycheck-set-checker-executable 'alan-compiler alan-compiler)
+	  (flycheck-set-checker-executable 'alan alan-compiler)
 	  (alan-setup-compiler-project-compiler))
 	 (t (message "No alan compiler or script found.")))))
 
 (define-derived-mode alan-language-mode alan-mode "language"
   "Major mode for editing m-industries language files."
   (setq alan-project-file "project.json")
+  (setq alan-language-definition (concat (alan-project-root) "dependencies/dev/internals/alan/language"))
   (alan-setup-project-root))
 
 ;;; schema mode
