@@ -267,7 +267,8 @@ Not suitable for white space significant languages."
 
 (defun alan-flycheck-error-filter (error-list)
   (seq-remove (lambda (error)
-				(string= (flycheck-error-filename error) "/dev/null"))
+				(or (string= (flycheck-error-filename error) "/dev/null")
+					(not (string= (flycheck-error-filename error) (buffer-file-name)))))
 			  error-list))
 
 (flycheck-define-checker alan-compiler
@@ -306,6 +307,7 @@ Not suitable for white space significant languages."
 			(message (zero-or-more not-newline)
 					 (zero-or-more "\n " (zero-or-more not-newline)))
 			line-end))
+  :error-filter alan-flycheck-error-filter
   :modes (alan-application-mode
 		  alan-widget-implementation-mode
 		  alan-annotations-mode))
