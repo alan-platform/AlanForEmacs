@@ -31,7 +31,8 @@ function `projectile-project-root'"
 
 (defcustom alan-compiler "compiler-project"
   "The alan compiler.
-This one is used when a project root cannot be found.")
+This one is used when a project root cannot be found."
+  :group 'alan)
 (make-variable-buffer-local 'alan-compiler)
 
 (defvar-local alan-mode-font-lock-keywords
@@ -327,11 +328,11 @@ Not suitable for white space significant languages."
 		(alan-project-compiler (concat (alan-project-root) "dependencies/dev/internals/alan/tools/compiler-project")))
 	(cond
 	 ((file-executable-p alan-project-script)
-	   (setq alan-script alan-project-script)
-	   (flycheck-set-checker-executable 'alan alan-script))
+	  (setq alan-script alan-project-script)
+	  (setq flycheck-alan-executable alan-script))
 	 ((file-executable-p alan-project-compiler)
 	  (setq alan-compiler alan-project-compiler)
-	  (flycheck-set-checker-executable 'alan alan-compiler)
+	  (setq flycheck-alan-executable alan-compiler)
 	  (alan-setup-compiler-project-compiler))
 	 (t (message "No alan compiler or script found.")))))
 
@@ -369,7 +370,6 @@ Not suitable for white space significant languages."
 
 (define-derived-mode alan-schema-mode alan-language-mode "schema"
   "Major mode for editing m-industries schema files."
-  (flycheck-add-mode 'alan-compiler 'alan-schema-mode)
   (modify-syntax-entry ?} "_" alan-schema-mode-syntax-table)
   (modify-syntax-entry ?{ "_" alan-schema-mode-syntax-table)
   (modify-syntax-entry ?[ "_" alan-schema-mode-syntax-table)
@@ -482,13 +482,13 @@ Not suitable for white space significant languages."
   (modify-syntax-entry ?` "w")
   (modify-syntax-entry ?[ "(]")
   (modify-syntax-entry ?] ")[")
-  (setq alan-language-definition (concat (alan-project-root) "dependencies/dev/internals/alan-to-text-transformation/language"))
-  (alan-language-setup-compile-command))
+  (setq alan-language-definition (concat (alan-project-root) "dependencies/dev/internals/alan-to-text-transformation/language")))
 
 ;;; Application modes
 
 (defcustom alan-script "alan"
-  "The alan build script file.")
+  "The alan build script file."
+  :group 'alan)
 (make-variable-buffer-local 'alan-script)
 
 (defun alan-setup-compiler-alan-script ( )
