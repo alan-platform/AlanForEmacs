@@ -274,7 +274,7 @@ Not suitable for white space significant languages."
 
 (flycheck-define-checker alan
   "An Alan syntax checker."
-  :command ("compiler-project"
+  :command ("alan"
 			(eval (if (null alan-language-definition)
 					'("validate" "emacs")
 					`(,alan-language-definition "--format" "emacs" "--log" "warning" "/dev/null"))))
@@ -334,6 +334,8 @@ Not suitable for white space significant languages."
 	  (setq alan-compiler alan-project-compiler)
 	  (setq flycheck-alan-executable alan-compiler)
 	  (alan-setup-compiler-project-compiler))
+	 ((executable-find alan-script)
+	  (setq flycheck-alan-executable alan-script))
 	 (t (message "No alan compiler or script found.")))))
 
 (define-derived-mode alan-language-mode alan-mode "language"
