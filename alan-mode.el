@@ -26,13 +26,16 @@
 (defcustom alan-xref-limit-to-project-scope t
   "Limits symbol lookup to the open buffers in project scope.
 Only available when projectile is loaded, because it is based on
-function `projectile-project-root'"
-  :group 'alan)
+the function `projectile-project-root'"
+  :group 'alan
+  :type '(boolean))
 
 (defcustom alan-compiler "compiler-project"
   "The alan compiler.
-This one is used when a project root cannot be found."
-  :group 'alan)
+This one is used when the variable `alan-project-root' cannot be
+resolved to an existing directory."
+  :group 'alan
+  :type '(string))
 (make-variable-buffer-local 'alan-compiler)
 
 (defvar-local alan-mode-font-lock-keywords
@@ -272,12 +275,15 @@ Not suitable for white space significant languages."
 					(not (string= (flycheck-error-filename error) (buffer-file-name)))))
 			  error-list))
 
+(defvar-local alan--flycheck-language-definition nil
+  "The real path to the language definition if `alan-language-definition' can be resolved.")
+
 (flycheck-define-checker alan
   "An Alan syntax checker."
   :command ("alan"
-			(eval (if (null alan-language-definition)
+			(eval (if (null alan--flycheck-language-definition)
 					'("validate" "emacs")
-					`(,alan-language-definition "--format" "emacs" "--log" "warning" "/dev/null"))))
+					`(,alan--flycheck-language-definition "--format" "emacs" "--log" "warning" "/dev/null"))))
   :error-patterns
   ((error line-start (file-name) ":" line ":" column ": error:"
 		  ;; Messages start with a white space after the error.
@@ -318,31 +324,30 @@ Not suitable for white space significant languages."
 
 (defvar-local alan-language-definition nil)
 
-(defun alan-setup-compiler-project-compiler ()
-  (set (make-local-variable 'compilation-error-screen-columns) nil)
-  (set (make-local-variable 'compile-command)
-	   (concat alan-compiler " " alan-language-definition " --format emacs --log warning /dev/null ")))
-
-(defun alan-setup-project-root ()
+(defun alan-setup-build-system ()
   (let ((alan-project-script (concat (alan-project-root) "/alan"))
-		(alan-project-compiler (concat (alan-project-root) "dependencies/dev/internals/alan/tools/compiler-project")))
+		(alan-project-compiler (concat (alan-project-root) "dependencies/dev/internals/alan/tools/compiler-project"))
+		(alan-project-language (concat (alan-project-root) alan-language-definition)))
+	(set (make-local-variable 'compilation-error-screen-columns) nil)
 	(cond
 	 ((file-executable-p alan-project-script)
-	  (setq alan-script alan-project-script)
-	  (setq flycheck-alan-executable alan-script))
+	  (setq flycheck-alan-executable alan-project-script)
+	  (set (make-local-variable 'compile-command) (concat alan-project-script " build emacs ")))
 	 ((file-executable-p alan-project-compiler)
-	  (setq alan-compiler alan-project-compiler)
-	  (setq flycheck-alan-executable alan-compiler)
-	  (alan-setup-compiler-project-compiler))
+	  (setq flycheck-alan-executable alan-project-compiler)
+	  (setq alan--flycheck-language-definition alan-project-language)
+	  (set (make-local-variable 'compile-command)
+		   (concat alan-project-compiler " " alan-project-language " --format emacs --log warning /dev/null ")))
 	 ((executable-find alan-script)
-	  (setq flycheck-alan-executable alan-script))
+	  (setq flycheck-alan-executable alan-script)
+	  (set (make-local-variable 'compile-command) (concat alan-script " build emacs ")))
 	 (t (message "No alan compiler or script found.")))))
 
 (define-derived-mode alan-language-mode alan-mode "language"
   "Major mode for editing m-industries language files."
+  :after-hook (alan-setup-build-system)
   (setq alan-project-file "project.json")
-  (setq alan-language-definition (concat (alan-project-root) "dependencies/dev/internals/alan/language"))
-  (alan-setup-project-root))
+  (setq alan-language-definition "dependencies/dev/internals/alan/language"))
 
 ;;; schema mode
 
@@ -374,8 +379,8 @@ Not suitable for white space significant languages."
   "Major mode for editing m-industries schema files."
   (modify-syntax-entry ?} "_" alan-schema-mode-syntax-table)
   (modify-syntax-entry ?{ "_" alan-schema-mode-syntax-table)
-  (modify-syntax-entry ?[ "_" alan-schema-mode-syntax-table)
-  (modify-syntax-entry ?] "_" alan-schema-mode-syntax-table)
+  (modify-syntax-entry ?\[ "_" alan-schema-mode-syntax-table)
+  (modify-syntax-entry ?\] "_" alan-schema-mode-syntax-table)
   (font-lock-add-keywords nil alan-schema-font-lock-keyword "at end"))
 
 ;;; grammar mode
@@ -457,8 +462,8 @@ Not suitable for white space significant languages."
 (define-derived-mode alan-grammar-mode alan-language-mode "grammar"
   "Major mode for editing m-industries schema files."
   (modify-syntax-entry ?} "_" alan-grammar-mode-syntax-table)
-  (modify-syntax-entry ?[ "(]" alan-grammar-mode-syntax-table)
-  (modify-syntax-entry ?] ")[" alan-grammar-mode-syntax-table)
+  (modify-syntax-entry ?\[ "(]" alan-grammar-mode-syntax-table)
+  (modify-syntax-entry ?\] ")[" alan-grammar-mode-syntax-table)
   (font-lock-add-keywords nil alan-grammar-font-lock-keyword "end")
 
   (electric-indent-local-mode -1)
@@ -482,25 +487,21 @@ Not suitable for white space significant languages."
 (define-derived-mode alan-template-mode alan-language-mode "template"
   "Major mode for editing m-industries template files."
   (modify-syntax-entry ?` "w")
-  (modify-syntax-entry ?[ "(]")
-  (modify-syntax-entry ?] ")[")
+  (modify-syntax-entry ?\[ "(]")
+  (modify-syntax-entry ?\] ")[")
   (setq alan-language-definition (concat (alan-project-root) "dependencies/dev/internals/alan-to-text-transformation/language")))
 
 ;;; Application modes
 
 (defcustom alan-script "alan"
   "The alan build script file."
-  :group 'alan)
+  :group 'alan
+  :type '(string))
 (make-variable-buffer-local 'alan-script)
-
-(defun alan-setup-compiler-alan-script ( )
-  (set (make-local-variable 'compilation-error-screen-columns) nil)
-  (set (make-local-variable 'compile-command) (concat alan-script " build emacs ")))
 
 (define-derived-mode alan-project-mode alan-mode "alan project"
   "Abstract major mode for editing m-industries project files."
-  (alan-setup-project-root)
-  (alan-setup-compiler-alan-script))
+  :after-hook (alan-setup-build-system))
 
 ;;; application mode
 
@@ -583,11 +584,12 @@ Not suitable for white space significant languages."
 
 (define-derived-mode alan-widget-implementation-mode alan-project-mode "widget implementation"
   "Major mode for editing m-industries widget-implementation model files."
+  (message "loading widget implementation mode")
   (font-lock-add-keywords nil alan-widget-implementation-font-lock-keyword "at end")
   (modify-syntax-entry ?} "_" alan-mode-syntax-table)
   (modify-syntax-entry ?{ "_" alan-mode-syntax-table)
-  (modify-syntax-entry ?[ "(]" alan-mode-syntax-table)
-  (modify-syntax-entry ?] ")[" alan-mode-syntax-table))
+  (modify-syntax-entry ?\[ "(]" alan-mode-syntax-table)
+  (modify-syntax-entry ?\] ")[" alan-mode-syntax-table))
 
 (provide 'alan-mode)
 
