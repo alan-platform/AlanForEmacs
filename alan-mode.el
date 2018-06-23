@@ -1,4 +1,4 @@
-;;; alan-mode.el --- Major mode for editing M-industries alan files
+;;; alan-mode.el --- Major mode for editing M-industries Alan files
 
 ;; Copyright (C) 2018 M-industries
 
@@ -8,13 +8,13 @@
 ;; Created: 13 October 2017
 ;; URL: https://github.com/M-industries/AlanForEmacs
 ;; Homepage: https://www.m-industries.com/
-;; Keywords: alan
-;; Package-Requires: ((Flycheck "27") (emacs "25.1"))
+;; Keywords: alan, languages
+;; Package-Requires: ((flycheck "32") (emacs "25.1"))
 
 ;; This file is not part of GNU Emacs.
 
 ;;; Commentary:
-;;
+;; A major mode for editing M-industries Alan files.
 
 (require 'flycheck)
 (require 'timer)
@@ -58,7 +58,7 @@ resolved to an existing directory."
 
 (defvar alan-parent-regexp "\\s-*\\('[^']*?'\\)")
 
-(defun boundry-of-identifier-at-point ()
+(defun alan-boundry-of-identifier-at-point ()
   (let ((text-properties (nth 1 (text-properties-at (point)))))
 	(when (or (and (listp text-properties)
 				  (member font-lock-variable-name-face text-properties))
@@ -68,7 +68,7 @@ resolved to an existing directory."
 			(end (search-forward "'" nil nil 2)))
 		  (if (and beginning end)
 			  (cons beginning end)))))))
-(put 'identifier 'bounds-of-thing-at-point 'boundry-of-identifier-at-point)
+(put 'identifier 'bounds-of-thing-at-point 'alan-boundry-of-identifier-at-point)
 (defun alan-thing-at-point ()
   "Find alan variable at point."
   (let ((boundary-pair (bounds-of-thing-at-point 'identifier)))
@@ -137,33 +137,33 @@ resolved to an existing directory."
 
 (defun alan--has-parent ()
   "Return point of parent or nil otherwise."
-  (save-excursion
-	(defvar line-to-ignore-regex "^\\s-*\\(//.*\\)?$")
-	(move-beginning-of-line 1)
-	(while (and (not (bobp))
-				(looking-at line-to-ignore-regex))
-	  (forward-line -1))
-
-	(let ((start-indent (current-indentation))
-		  (curr-indent (current-indentation))
-		  (curr-point (point))
-		  (start-line-number (line-number-at-pos)))
-	  (defvar new-point)
+  (let ((line-to-ignore-regex "^\\s-*\\(//.*\\)?$"))
+	(save-excursion
+	  (move-beginning-of-line 1)
 	  (while (and (not (bobp))
-				  (> start-indent 0)
-				  (or (not (looking-at "\\s-*'[^']*?'"))
-					  (looking-at line-to-ignore-regex)
-					  (> (current-indentation) curr-indent)
-					  (<= start-indent (current-indentation))))
-		(forward-line -1)
-		(unless  (looking-at line-to-ignore-regex)
-		  (setq curr-indent (min curr-indent (current-indentation))))
-		(setq new-point (point)))
-	  (if
-		  (and
-		   (looking-at alan-parent-regexp)
-		   (not (equal start-line-number (line-number-at-pos))))
-		  (match-beginning 1)))))
+				  (looking-at line-to-ignore-regex))
+		(forward-line -1))
+
+	  (let ((start-indent (current-indentation))
+			(curr-indent (current-indentation))
+			(curr-point (point))
+			(start-line-number (line-number-at-pos)))
+		(defvar new-point)
+		(while (and (not (bobp))
+					(> start-indent 0)
+					(or (not (looking-at "\\s-*'[^']*?'"))
+						(looking-at line-to-ignore-regex)
+						(> (current-indentation) curr-indent)
+						(<= start-indent (current-indentation))))
+		  (forward-line -1)
+		  (unless  (looking-at line-to-ignore-regex)
+			(setq curr-indent (min curr-indent (current-indentation))))
+		  (setq new-point (point)))
+		(if
+			(and
+			 (looking-at alan-parent-regexp)
+			 (not (equal start-line-number (line-number-at-pos))))
+			(match-beginning 1))))))
 
 (defun alan-goto-parent ()
   "Goto the parent of this property."
