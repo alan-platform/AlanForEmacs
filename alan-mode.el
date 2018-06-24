@@ -207,14 +207,15 @@ This uses the `alan-path' function to get its value."
 (defun alan-path ()
   "Gives the location as a path of where you are in a file.
 E.g. 'views' . 'queries' . 'context' . 'candidates' . 'of'"
-  (setq path-list '())
-  (save-excursion
-	(while (setq has-parent (alan--has-parent))
-	  (goto-char has-parent)
-	  (add-to-list 'path-list (match-string 1))))
-  (if (> (length path-list) 0)
-	  (mapconcat 'identity path-list " . ")
-	""))
+  (let ((path-list '())
+		has-parent)
+	(save-excursion
+	  (while (setq has-parent (alan--has-parent))
+		(goto-char has-parent)
+		(add-to-list 'path-list (match-string 1))))
+	(if (> (length path-list) 0)
+		(mapconcat 'identity path-list " . ")
+	  "")))
 
 (defun alan-mode-indent-line ()
   "Indentation based on parens.
