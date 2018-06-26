@@ -585,8 +585,13 @@ Not suitable for white space significant languages."
 					"{" "|" "}" "~>" )) . font-lock-builtin-face))
   "Highlight keywords for alan application mode.")
 
+(defalias 'alan-application-syntax-propertize-function
+  (syntax-propertize-rules ("[\\.%]\\(}\\)" (1 "_")))
+  "Special rules for Alan application keywords that should not have the close syntax.")
+
 (define-derived-mode alan-application-mode alan-project-mode "alan application"
   "Major mode for editing m-industries application model files."
+  (set (make-local-variable 'syntax-propertize-function) #'alan-application-syntax-propertize-function)
   (font-lock-add-keywords nil alan-application-font-lock-keyword "at end")
   (modify-syntax-entry ?\] "_" alan-mode-syntax-table)
   (modify-syntax-entry ?\[ "_" alan-mode-syntax-table)
