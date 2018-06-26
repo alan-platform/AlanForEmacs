@@ -325,7 +325,7 @@ Not suitable for white space significant languages."
 		  alan-grammar-mode
 		  alan-template-mode
 		  alan-application-mode
-		  alan-widget-implementation-mode
+		  alan-widget-mode
 		  alan-annotations-mode))
 (add-to-list 'flycheck-checkers 'alan)
 
@@ -595,9 +595,9 @@ Not suitable for white space significant languages."
 
 ;;; widget implementation mode
 
-(add-to-list `auto-mode-alist '("widgets/.*\\.ui\\.alan$" . alan-widget-implementation-mode))
+(add-to-list `auto-mode-alist '("widgets/.*\\.ui\\.alan$" . alan-widget-mode))
 
-(defconst alan-widget-implementation-font-lock-keyword
+(defconst alan-widget-font-lock-keyword
   `((,(regexp-opt '( "#" "$" "(" ")" "*" "," "->" "."  ".}"  ":" "::" "=>" ">"
 					 ">>" "?"  "@" "[" "]" "^" "binding" "configuration"
 					 "control" "current" "dictionary" "empty" "engine" "file"
@@ -605,14 +605,20 @@ Not suitable for white space significant languages."
 					 "markup" "number" "on" "set" "state" "stategroup" "static"
 					 "switch" "text" "time" "to" "transform" "unconstrained"
 					 "view" "widget" "window" "|" )) . font-lock-builtin-face))
-  "Highlight keywords for alan widget-implementation mode.")
+  "Highlight keywords for alan widget mode.")
 
-(define-derived-mode alan-widget-implementation-mode alan-project-mode "widget implementation"
-  "Major mode for editing m-industries widget-implementation model files."
-  (message "loading widget implementation mode")
-  (font-lock-add-keywords nil alan-widget-implementation-font-lock-keyword "at end")
-  (modify-syntax-entry ?} "_" alan-mode-syntax-table)
-  (modify-syntax-entry ?{ "_" alan-mode-syntax-table)
+(defalias 'alan-widget-syntax-propertize-function
+  (syntax-propertize-rules ("\\.\\(}\\)" (1 "_")))
+  "Special rules for Alan keywords that should not have the close syntax.
+In this case .} denotes a matrix key and not a close
+matching. This is to prevent inbalanced pairs.")
+
+(define-derived-mode alan-widget-mode alan-project-mode "widget"
+  "Major mode for editing m-industries widget model files."
+  (set (make-local-variable 'syntax-propertize-function) #'alan-widget-syntax-propertize-function)
+  (font-lock-add-keywords nil alan-widget-font-lock-keyword "at end")
+  (modify-syntax-entry ?} "){" alan-mode-syntax-table)
+  (modify-syntax-entry ?{ "(}" alan-mode-syntax-table)
   (modify-syntax-entry ?\[ "(]" alan-mode-syntax-table)
   (modify-syntax-entry ?\] ")[" alan-mode-syntax-table))
 
