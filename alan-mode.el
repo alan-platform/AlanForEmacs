@@ -278,6 +278,7 @@ Not suitable for white space significant languages."
 			 (force-mode-line-update)))
 		 (current-buffer))))
 
+;;;###autoload
 (define-derived-mode alan-mode prog-mode "Alan"
   "Major mode for editing m-industries alan files."
   :syntax-table alan-mode-syntax-table
@@ -368,6 +369,7 @@ Not suitable for white space significant languages."
 	  (set (make-local-variable 'compile-command) (concat alan-script " build emacs ")))
 	 (t (message "No alan compiler or script found.")))))
 
+;;;###autoload
 (define-derived-mode alan-language-mode alan-mode "language"
   "Major mode for editing m-industries language files."
   :after-hook (alan-setup-build-system)
@@ -399,6 +401,7 @@ Not suitable for white space significant languages."
 					 "implicit" "ignore" "experimental" "libraries" "using")) . font-lock-builtin-face))
   "Highlight keywords for alan schema mode.")
 
+;;;###autoload
 (define-derived-mode alan-schema-mode alan-language-mode "schema"
   "Major mode for editing m-industries schema files."
   (modify-syntax-entry ?} "_" alan-schema-mode-syntax-table)
@@ -482,6 +485,7 @@ Not suitable for white space significant languages."
  	(when new-indent
  	  (indent-line-to new-indent))))
 
+;;;###autoload
 (define-derived-mode alan-grammar-mode alan-language-mode "grammar"
   "Major mode for editing m-industries schema files."
   (modify-syntax-entry ?} "_" alan-grammar-mode-syntax-table)
@@ -507,6 +511,7 @@ Not suitable for white space significant languages."
 					   (split-string string-to-yank "\n"))
 			   "\n"))))
 
+;;;###autoload
 (define-derived-mode alan-template-mode alan-language-mode "template"
   "Major mode for editing m-industries template files."
   (modify-syntax-entry ?` "w")
@@ -522,6 +527,7 @@ Not suitable for white space significant languages."
   :type '(string))
 (make-variable-buffer-local 'alan-script)
 
+;;;###autoload
 (define-derived-mode alan-project-mode alan-mode "alan project"
   "Abstract major mode for editing m-industries project files."
   :after-hook (alan-setup-build-system))
@@ -587,6 +593,7 @@ Not suitable for white space significant languages."
   (syntax-propertize-rules ("[\\.%]\\(}\\)" (1 "_")))
   "Special rules for Alan application keywords that should not have the close syntax.")
 
+;;;###autoload
 (define-derived-mode alan-application-mode alan-project-mode "alan application"
   "Major mode for editing m-industries application model files."
   (set (make-local-variable 'syntax-propertize-function) #'alan-application-syntax-propertize-function)
@@ -616,6 +623,7 @@ Not suitable for white space significant languages."
 In this case .} denotes a matrix key and not a close
 matching. This is to prevent inbalanced pairs.")
 
+;;;###autoload
 (define-derived-mode alan-widget-mode alan-project-mode "widget"
   "Major mode for editing m-industries widget model files."
   (set (make-local-variable 'syntax-propertize-function) #'alan-widget-syntax-propertize-function)
@@ -644,6 +652,7 @@ matching. This is to prevent inbalanced pairs.")
   (syntax-propertize-rules ("/?%\\(}\\)" (1 "_")))
   "Special rules for Alan keywords that shouldn't have the close syntax.")
 
+;;;###autoload
 (define-derived-mode alan-views-mode alan-project-mode "alan views"
   "Major mode for editing M-industries views files."
   (set (make-local-variable 'syntax-propertize-function) #'alan-views-syntax-propertize-function)
