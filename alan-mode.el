@@ -390,14 +390,13 @@ Not suitable for white space significant languages."
 (defconst alan-schema-font-lock-keyword
   `(
 	("->\\s-+\\(stategroup\\|component\\|group\\|dictionary\\|command\\|densematrix\\|sparsematrix\\|reference\\|number\\|text\\)\\(\\s-+\\|$\\)" 1 font-lock-type-face)
-	(,(regexp-opt '( "component" "types" "external" "(" ")" "->" "plural"
-					 "numerical" "integer" "natural" "root" "]" ":" "*" "?"  "~"
-					 "+" "constrain" "acyclic" "ordered" "dictionary"
-					 "densematrix" "sparsematrix" "$" "==" "!=" "group" "number"
-					 "reference" "stategroup" "text" "."  "!"  "!&" "&" ".^"
-					 "+^" "}" ">" "*&" "?^" ">>" "forward" "self" "{" "graph"
-					 "usage" "implicit" "ignore" "experimental" "libraries"
-					 "using")) . font-lock-builtin-face))
+	(,(regexp-opt '( "component" "types" "external" "->" "plural" "numerical"
+					 "integer" "natural" "root" "]" ":" "*" "?"  "~" "+"
+					 "constrain" "acyclic" "ordered" "dictionary" "densematrix"
+					 "sparsematrix" "$" "==" "!=" "group" "number" "reference"
+					 "stategroup" "text" "."  "!"  "!&" "&" ".^" "+^" "}" ">"
+					 "*&" "?^" ">>" "forward" "self" "{" "graph" "usage"
+					 "implicit" "ignore" "experimental" "libraries" "using")) . font-lock-builtin-face))
   "Highlight keywords for alan schema mode.")
 
 (define-derived-mode alan-schema-mode alan-language-mode "schema"
@@ -416,9 +415,8 @@ Not suitable for white space significant languages."
   `(
 	(,(regexp-opt
 	   '("rules" "root" "component" "indent" "keywords" "collection" "order"
-		 "predecessors" "successors" "group" "(" ")" "number" "reference"
-		 "stategroup" "has" "first" "last" "predecessor" "successor" "text" "["
-		 "]" ","
+		 "predecessors" "successors" "group" "number" "reference" "stategroup"
+		 "has" "first" "last" "predecessor" "successor" "text" "[" "]" ","
 		 )) . font-lock-builtin-face))
   "Highlight keywords for alan schema mode.")
 
@@ -558,12 +556,12 @@ Not suitable for white space significant languages."
 					"@key-description:" "@label:" "@linked" "@max:" "@metadata"
 					"@min:" "@multi-line" "@name" "@namespace" "@small"
 					"@sticky" "@validate:" "@verified" "@visible" )) . font-lock-keyword-face)
-	(,(regexp-opt '("#" "#reader" "#writer" "$" "$^" "%" "%^" "%}" "&#" "&" "("
-					")" "*" "+" "+^" "," "-" "-<" "->" "." ".^" ".key" ".self"
-					".}" "/" "10^" ":" ":=" "<" "<-" "<=" "=" "==" "=>" ">" ">="
-					">key" "?" "?^" "@%^" "@" "@?^" "@date" "@date-time"
-					"@default:" "@description:" "@desired" "@dormant"
-					"@duration:" "@factor:" "@guid" "@hidden" "@identifying"
+	(,(regexp-opt '("#" "#reader" "#writer" "$" "$^" "%" "%^" "%}" "&#" "&" "*"
+					"+" "+^" "," "-" "-<" "->" "." ".^" ".key" ".self" ".}" "/"
+					"10^" ":" ":=" "<" "<-" "<=" "=" "==" "=>" ">" ">=" ">key"
+					"?" "?^" "@%^" "@" "@?^" "@date" "@date-time" "@default:"
+					"@description:" "@desired" "@dormant" "@duration:"
+					"@factor:" "@guid" "@hidden" "@identifying"
 					"@key-description:" "@label:" "@linked" "@max:" "@metadata"
 					"@min:" "@multi-line" "@name" "@namespace" "@small"
 					"@sticky" "@validate:" "@verified" "@visible" "[" "]" "^"
@@ -582,7 +580,7 @@ Not suitable for white space significant languages."
 					"seconds" "space" "sparse" "stategroup" "std" "subtract"
 					"sum" "sumlist" "switch" "text" "timer" "today" "true"
 					"union" "unsafe" "update" "users" "with" "workfor" "zero"
-					"{" "|" "}" "~>" )) . font-lock-builtin-face))
+					"|" "~>" )) . font-lock-builtin-face))
   "Highlight keywords for alan application mode.")
 
 (defalias 'alan-application-syntax-propertize-function
@@ -603,13 +601,13 @@ Not suitable for white space significant languages."
 (add-to-list `auto-mode-alist '("widgets/.*\\.ui\\.alan$" . alan-widget-mode))
 
 (defconst alan-widget-font-lock-keyword
-  `((,(regexp-opt '( "#" "$" "(" ")" "*" "," "->" "."  ".}"  ":" "::" "=>" ">"
-					 ">>" "?"  "@" "[" "]" "^" "binding" "configuration"
-					 "control" "current" "dictionary" "empty" "engine" "file"
-					 "format" "inline" "instruction" "interval" "let" "list"
-					 "markup" "number" "on" "set" "state" "stategroup" "static"
-					 "switch" "text" "time" "to" "transform" "unconstrained"
-					 "view" "widget" "window" "|" )) . font-lock-builtin-face))
+  `((,(regexp-opt
+	   '( "#" "$" "*" "," "->" "."  ".}"  ":" "::" "=>" ">" ">>" "?"  "@" "^"
+		  "binding" "configuration" "control" "current" "dictionary" "empty"
+		  "engine" "file" "format" "inline" "instruction" "interval" "let"
+		  "list" "markup" "number" "on" "set" "state" "stategroup" "static"
+		  "switch" "text" "time" "to" "transform" "unconstrained" "view"
+		  "widget" "window" "|" )) . font-lock-builtin-face))
   "Highlight keywords for alan widget mode.")
 
 (defalias 'alan-widget-syntax-propertize-function
@@ -622,6 +620,34 @@ matching. This is to prevent inbalanced pairs.")
   "Major mode for editing m-industries widget model files."
   (set (make-local-variable 'syntax-propertize-function) #'alan-widget-syntax-propertize-function)
   (font-lock-add-keywords nil alan-widget-font-lock-keyword "at end")
+  (modify-syntax-entry ?} "){" alan-mode-syntax-table)
+  (modify-syntax-entry ?{ "(}" alan-mode-syntax-table)
+  (modify-syntax-entry ?\[ "(]" alan-mode-syntax-table)
+  (modify-syntax-entry ?\] ")[" alan-mode-syntax-table))
+
+;;; views mode
+
+(add-to-list `auto-mode-alist '("views/.*\\.ui\\.alan$" . alan-views-mode))
+
+(defconst alan-views-font-lock-keyword
+  `((,(regexp-opt
+	   '( "$" "%" "%^" "%}" "*" "+" "+^" "-" "->" "."  ".>" ".^" "/%}" "/>"
+		  ":>" "<" "<<" "<=" "=" "==" ">" ">=" ">>" "?"  "?^" "@" "as"
+		  "candidates" "collection" "command" "disabled" "enabled" "entity"
+		  "file" "filter" "from" "group" "id" "inline" "key" "limit" "link"
+		  "matrix" "node" "none" "now" "number" "of" "on" "open" "path" "query"
+		  "reference" "refresh" "role" "root" "selected" "stategroup"
+		  "subscribe" "text" "using" "view" "window")) . font-lock-builtin-face))
+  "Highlight keywords for alan views mode.")
+
+(defalias 'alan-views-syntax-propertize-function
+  (syntax-propertize-rules ("/?%\\(}\\)" (1 "_")))
+  "Special rules for Alan keywords that shouldn't have the close syntax.")
+
+(define-derived-mode alan-views-mode alan-project-mode "alan views"
+  "Major mode for editing M-industries views files."
+  (set (make-local-variable 'syntax-propertize-function) #'alan-views-syntax-propertize-function)
+  (font-lock-add-keywords nil alan-views-font-lock-keyword "at end")
   (modify-syntax-entry ?} "){" alan-mode-syntax-table)
   (modify-syntax-entry ?{ "(}" alan-mode-syntax-table)
   (modify-syntax-entry ?\[ "(]" alan-mode-syntax-table)
