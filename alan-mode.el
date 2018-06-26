@@ -593,7 +593,7 @@ Not suitable for white space significant languages."
   (modify-syntax-entry ?{ "(}" alan-mode-syntax-table)
   (modify-syntax-entry ?} "){" alan-mode-syntax-table))
 
-;;; widget implementation mode
+;;; widget mode
 
 (add-to-list `auto-mode-alist '("widgets/.*\\.ui\\.alan$" . alan-widget-mode))
 
