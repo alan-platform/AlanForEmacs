@@ -45,7 +45,7 @@
 
 ;;; Code:
 
-(add-to-list `auto-mode-alist '("\\.alan$" . alan-mode))
+(add-to-list 'auto-mode-alist '("\\.alan$" . alan-mode))
 
 (defcustom alan-xref-limit-to-project-scope t
   "Limits symbol lookup to the open buffers in project scope.
@@ -61,6 +61,14 @@ resolved to an existing directory."
   :group 'alan
   :type '(string))
 (make-variable-buffer-local 'alan-compiler)
+
+(defcustom alan-script "alan"
+  "The alan build script file."
+  :group 'alan
+  :type '(string))
+(make-variable-buffer-local 'alan-script)
+
+;;; Alan mode
 
 (defvar-local alan-mode-font-lock-keywords
   '((("'[^']*?'" . font-lock-variable-name-face))
@@ -79,28 +87,128 @@ resolved to an existing directory."
 	alan-mode-syntax-table)
   "Syntax table for ‘alan-mode’.")
 
+;;;###autoload
+(define-derived-mode alan-mode prog-mode "Alan"
+  "Major mode for editing M-industries alan files."
+  :syntax-table alan-mode-syntax-table
+  :group 'alan
+  (setq comment-start "//")
+  (setq comment-end "")
+  (setq block-comment-start "/*")
+  (setq block-comment-end "*/")
+  (modify-syntax-entry ?\] "_" alan-mode-syntax-table)
+  (modify-syntax-entry ?\[ "_" alan-mode-syntax-table)
+  (setq font-lock-defaults alan-mode-font-lock-keywords)
+  (add-hook 'xref-backend-functions #'alan--xref-backend nil t)
+  (set (make-local-variable 'indent-line-function) 'alan-mode-indent-line)
+  (add-hook 'post-command-hook #'alan-update-header nil t)
+  (setq header-line-format ""))
+
 (defvar alan-parent-regexp "\\s-*\\('[^']*?'\\)")
+
+(defmacro alan-define-mode (name &optional docstring &rest body)
+  "Define NAME as an Alan major mode.
+
+The mode derives from the generic `alan-mode'.
+
+BODY can define keyword aguments.
+:file-pattern
+	The file pattern to associate with the major mode. If none is
+	provided it will associate it with NAME.alan.
+:keywords
+	A list of cons cells where the first is a regexp or a list of keywords
+	and the second element is the font-face.
+:language
+	The path to the Alan language definition.
+:pairs
+	A list of cons cells that match open and close parameters.
+:propertize-rules
+	A list of rules used by `syntax-propertize-rules' When set will set the
+	propertize function for this mode.
+
+The rest of the BODY is evaluated in the body of the derived-mode."
+
+  (declare
+   ;; make sure that we can jump to the mode definition.
+   (debug (&define (intern (concat "alan-" (symbol-name name) "-mode")) symbolp sexp [&optional stringp]
+				   [&rest keywordp sexp] def-body)) ;;todo check if this is correct.
+   (doc-string 2)
+   (indent 2))
+  (let ((mode-name (intern (concat "alan-" (symbol-name name) "-mode")))
+		(font-lock-name (intern (concat "alan-" (symbol-name name) "-font-lock-keywords")))
+		(file-pattern (concat (symbol-name name) ".alan"))
+		(keywords)
+		(language)
+		(pairs '())
+		(propertize-rules))
+
+	;; Process the keyword args.
+    (while (keywordp (car body))
+      (pcase (pop body)
+		(`:file-pattern (setq file-pattern (pop body)))
+		(`:keywords (setq keywords (pop body)))
+		(`:language (setq language (pop body)))
+		(`:pairs (setq pairs (pop body)))
+		(`:propertize-rules (setq propertize-rules (pop body)))
+		(_ (pop body))))
+
+	(when keywords
+	  (setq keywords (mapcar (lambda (keyword-entry)
+							   (if (listp (car keyword-entry))
+								   (cons (regexp-opt (car keyword-entry)) (cdr keyword-entry))
+								 keyword-entry)
+							   ) keywords)))
+
+	`(progn
+	   (add-to-list 'auto-mode-alist '(,file-pattern . alan-schema-mode))
+	   ,(when keywords
+		  `(progn
+			 (defconst ,font-lock-name
+		  	   ',keywords
+		  	   ,(concat "Highlight keywords for Alan " (symbol-name name) " mode."))))
+
+	   (define-derived-mode ,mode-name alan-mode ,(symbol-name name)
+		 ,docstring
+		 :group 'alan
+		 :after-hook (alan-setup-build-system)
+		 ,(when language
+			`(progn
+			   (setq alan-project-file "project.json")
+			   (setq alan-language-definition ,language)))
+		 ,(when keywords
+			`(progn
+			   (font-lock-add-keywords nil ,font-lock-name "at end")))
+		 ,@(mapcar
+		   (lambda (pair)
+			 `(progn
+				(modify-syntax-entry ,(string-to-char (car pair)) ,(concat "(" (cdr pair)) alan-mode-syntax-table)
+				(modify-syntax-entry ,(string-to-char (cdr pair)) ,(concat ")" (car pair)) alan-mode-syntax-table)))
+		   pairs)
+		 ,(when propertize-rules
+			`(progn
+			   (set (make-local-variable 'syntax-propertize-function) (syntax-propertize-rules ,@propertize-rules))))
+		 ,@body))))
+
+;;; Xref backend
 
 (defun alan-boundry-of-identifier-at-point ()
   (let ((text-properties (nth 1 (text-properties-at (point)))))
 	(when (or (and (listp text-properties)
-				  (member font-lock-variable-name-face text-properties))
-			 (eq font-lock-variable-name-face text-properties))
+				   (member font-lock-variable-name-face text-properties))
+			  (eq font-lock-variable-name-face text-properties))
 	  (save-excursion
 		(let ((beginning (search-backward "'"))
-			(end (search-forward "'" nil nil 2)))
+			  (end (search-forward "'" nil nil 2)))
 		  (if (and beginning end)
 			  (cons beginning end)))))))
 (put 'identifier 'bounds-of-thing-at-point 'alan-boundry-of-identifier-at-point)
 (defun alan-thing-at-point ()
   "Find alan variable at point."
   (let ((boundary-pair (bounds-of-thing-at-point 'identifier)))
-         (if boundary-pair
-             (buffer-substring-no-properties
-              (car boundary-pair) (cdr boundary-pair)))))
+    (if boundary-pair
+        (buffer-substring-no-properties
+         (car boundary-pair) (cdr boundary-pair)))))
 (put 'identifier 'thing-at-point 'alan-thing-at-point)
-
-;;; Xref backend
 
 ;; todo add view definitions
 ;; todo add widget definitions
@@ -193,8 +301,8 @@ resolved to an existing directory."
   (interactive)
   (let ((parent-position (alan--has-parent)))
 	(when (alan--has-parent)
-		(push-mark (point) t)
-		(goto-char parent-position))))
+	  (push-mark (point) t)
+	  (goto-char parent-position))))
 
 (defun alan-copy-path-to-clipboard ()
   "Copy the path as shown in the header of the buffer.
@@ -278,72 +386,6 @@ Not suitable for white space significant languages."
 			 (force-mode-line-update)))
 		 (current-buffer))))
 
-(defmacro alan--define-language (name &optional docstring &rest body)
-  "Define NAME as an Alan major mode.
-
-BODY can define keyword aguments.
-:file-pattern FILE-PATTERN
-	The file pattern to associate with the major mode. If none is
-	provided it will associate it with NAME.alan.
-:keywords
-	A list of cons cells where the first is a regexp or a list of keywords
-	and the second element is the font-face."
-
-  (declare (doc-string 2) (indent 2))
-  ;; check the language property
-  (let ((mode-name (intern (concat "alan-" (symbol-name name) "-mode")))
-		(font-lock-name (concat "alan-" (symbol-name name) "-font-lock-keywords"))
-		(file-pattern (concat (symbol-name name) ".alan"))
-		(keywords))
-
-	;; Process the keyword args.
-    (while (keywordp (car body))
-      (pcase (pop body)
-		(`:file-pattern (setq file-pattern (pop body)))
-		(`:keywords (setq keywords (pop body)))
-		(_ (pop body))))
-
-	(when keywords
-		  (setq keywords (mapcar (lambda (keyword-entry)
-					(if (stringp (car keyword-entry))
-						keyword-entry
-					  (cons (regexp-opt (car keyword-entry)) (cdr keyword-entry)))
-					) keywords)))
-
-	`(progn
-	   (add-to-list 'auto-mode-alist '("schema.alan" . alan-schema-mode))
-	   ,(when keywords
-		  `(progn
-			 (defconst ,font-lock-name
-		  	   ,keywords
-		  	   ,(concat "Highlight keywords for Alan " (symbol-name name) " mode."))))
-
-	   (define-derived-mode ,mode-name alan-mode ,(symbol-name name)
-		 ,docstring
-		 :group 'alan
-		 ,(when keywords
-			`(progn
-			   (font-lock-add-keywords nil ,font-lock-name "at end")))
-		 ,@body))))
-
-(alan--define-language build "A major mode for editting build files"
-  :keywords (("->\\s-+\\(stategroup\\|component\\|group\\|dictionary\\|command\\|densematrix\\|sparsematrix\\|reference\\|number\\|text\\)\\(\\s-+\\|$\\)" 1 font-lock-type-face)))
-
-;;;###autoload
-(define-derived-mode alan-mode prog-mode "Alan"
-  "Major mode for editing m-industries alan files."
-  :syntax-table alan-mode-syntax-table
-  :group 'alan
-  (setq comment-start "//")
-  (setq comment-end "")
-  (setq block-comment-start "/*")
-  (setq block-comment-end "*/")
-  (setq font-lock-defaults alan-mode-font-lock-keywords)
-  (add-hook 'xref-backend-functions #'alan--xref-backend nil t)
-  (set (make-local-variable 'indent-line-function) 'alan-mode-indent-line)
-  (add-hook 'post-command-hook #'alan-update-header nil t)
-  (setq header-line-format ""))
-
 ;;; Flycheck
 
 (defun alan-flycheck-error-filter (error-list)
@@ -359,7 +401,7 @@ BODY can define keyword aguments.
   "An Alan syntax checker."
   :command ("alan"
 			(eval (if (null alan--flycheck-language-definition)
-					'("validate" "emacs")
+					  '("validate" "emacs")
 					`(,alan--flycheck-language-definition "--format" "emacs" "--log" "warning" "/dev/null"))))
   :error-patterns
   ((error line-start (file-name) ":" line ":" column ": error:"
@@ -381,7 +423,7 @@ BODY can define keyword aguments.
 		  alan-annotations-mode))
 (add-to-list 'flycheck-checkers 'alan)
 
-;;; Project root
+;;; Project root and build system
 
 (defvar-local alan-project-root nil)
 (defvar-local alan-project-file "versions.json"
@@ -396,8 +438,6 @@ BODY can define keyword aguments.
 			  (progn
 				(message  "Couldn't locate project root folder with a %s file. Using' %s' as project root." alan-project-file default-directory)
 				default-directory))))))
-
-;;; Alan language mode
 
 (defvar-local alan-language-definition nil)
 
@@ -420,16 +460,7 @@ BODY can define keyword aguments.
 	  (set (make-local-variable 'compile-command) (concat alan-script " build emacs ")))
 	 (t (message "No alan compiler or script found.")))))
 
-;;;###autoload
-(define-derived-mode alan-language-mode alan-mode "language"
-  "Major mode for editing m-industries language files."
-  :after-hook (alan-setup-build-system)
-  (setq alan-project-file "project.json")
-  (setq alan-language-definition "dependencies/dev/internals/alan/language"))
-
-;;; schema mode
-
-(add-to-list `auto-mode-alist '("schema.alan" . alan-schema-mode))
+;;; Modes
 
 (defvar alan-imenu-generic-expression
   ;; Patterns to identify alan definitions
@@ -440,66 +471,45 @@ BODY can define keyword aguments.
 	("number" "^\\s-+'\\(\\(?:\\sw\\|\\s-+\\)*\\)'\\s-+->\\s-* number" 1)
 	("matrix" "^\\s-+'\\(\\(?:\\sw\\|\\s-+\\)*\\)'\\s-+->\\s-* \\(?:dense\\|sparse\\)matrix" 1)))
 
-(defconst alan-schema-font-lock-keyword
-  `(
-	("->\\s-+\\(stategroup\\|component\\|group\\|dictionary\\|command\\|densematrix\\|sparsematrix\\|reference\\|number\\|text\\)\\(\\s-+\\|$\\)" 1 font-lock-type-face)
-	(,(regexp-opt '( "component" "types" "external" "->" "plural" "numerical"
-					 "integer" "natural" "root" "]" ":" "*" "?"  "~" "+"
-					 "constrain" "acyclic" "ordered" "dictionary" "densematrix"
-					 "sparsematrix" "$" "==" "!=" "group" "number" "reference"
-					 "stategroup" "text" "."  "!"  "!&" "&" ".^" "+^" "}" ">"
-					 "*&" "?^" ">>" "forward" "self" "{" "graph" "usage"
-					 "implicit" "ignore" "experimental" "libraries" "using")) . font-lock-builtin-face))
-  "Highlight keywords for alan schema mode.")
-
-;;;###autoload
-(define-derived-mode alan-schema-mode alan-language-mode "schema"
-  "Major mode for editing m-industries schema files."
-  (modify-syntax-entry ?} "_" alan-schema-mode-syntax-table)
-  (modify-syntax-entry ?{ "_" alan-schema-mode-syntax-table)
-  (modify-syntax-entry ?\[ "_" alan-schema-mode-syntax-table)
-  (modify-syntax-entry ?\] "_" alan-schema-mode-syntax-table)
-  (font-lock-add-keywords nil alan-schema-font-lock-keyword "at end"))
-
-;;; grammar mode
-
-(add-to-list `auto-mode-alist '("grammar.alan" . alan-grammar-mode))
-
-(defconst alan-grammar-font-lock-keyword
-  `(
-	(,(regexp-opt
-	   '("rules" "root" "component" "indent" "keywords" "collection" "order"
-		 "predecessors" "successors" "group" "number" "reference" "stategroup"
-		 "has" "first" "last" "predecessor" "successor" "text" "[" "]" ","
-		 )) . font-lock-builtin-face))
-  "Highlight keywords for alan schema mode.")
+;;;###autoload (autoload 'schema "alan-mode.el")
+(alan-define-mode schema
+	"Major mode for editing M-industries schema files."
+  :language "dependencies/dev/internals/alan/language"
+  :keywords (("->\\s-+\\(stategroup\\|component\\|group\\|dictionary\\|command\\|densematrix\\|sparsematrix\\|reference\\|number\\|text\\)\\(\\s-+\\|$\\)" 1 font-lock-type-face)
+			 (( "component" "types" "external" "->" "plural" "numerical"
+				"integer" "natural" "root" "]" ":" "*" "?"  "~" "+" "constrain"
+				"acyclic" "ordered" "dictionary" "densematrix" "sparsematrix"
+				"$" "==" "!=" "group" "number" "reference" "stategroup" "text"
+				"."  "!"  "!&" "&" ".^" "+^" "}" ">" "*&" "?^" ">>" "forward"
+				"self" "{" "graph" "usage" "implicit" "ignore" "experimental"
+				"libraries" "using") . font-lock-builtin-face)))
 
 (defun alan-grammar-update-keyword ()
-	"Update the keywords section based on all used keywords in this grammar file."
-	(interactive)
-	(save-excursion
-	  (save-restriction
-		(widen)
-		(goto-char (point-min))
+  "Update the keywords section based on all used keywords in this grammar file."
+  (interactive)
+  (save-excursion
+	(save-restriction
+	  (widen)
+	  (goto-char (point-min))
 
-		(let ((keyword-point (re-search-forward "^keywords$"))
-			  (root-point (re-search-forward "^root$"))
-			  (root-point-start (match-beginning 0)) ;; because the last search was for root
-			  (alan-keywords (list)))
-		  (while (re-search-forward "\\[\\(\\s-?'[^'
+	  (let ((keyword-point (re-search-forward "^keywords$"))
+			(root-point (re-search-forward "^root$"))
+			(root-point-start (match-beginning 0)) ;; because the last search was for root
+			(alan-keywords (list)))
+		(while (re-search-forward "\\[\\(\\s-?'[^'
 ]+'\\s-?,?\\)+\\]" nil t) ;; there is a line end in the regex. Hence the weird break.
-			(let ((keyword-group (match-string 0))
-				  (search-start 0))
-			  (while (string-match "'[^']+'" keyword-group search-start)
-				(add-to-list 'alan-keywords (match-string 0 keyword-group))
-				(setq search-start (match-end 0)))))
-		  (delete-region (+ 1 keyword-point) root-point-start)
-		  (goto-char (+ 1 keyword-point))
-		  (insert (string-join (mapcar (lambda (k) (concat "\t" k)) (sort (delete-dups alan-keywords ) 'string<)) "
+		  (let ((keyword-group (match-string 0))
+				(search-start 0))
+			(while (string-match "'[^']+'" keyword-group search-start)
+			  (add-to-list 'alan-keywords (match-string 0 keyword-group))
+			  (setq search-start (match-end 0)))))
+		(delete-region (+ 1 keyword-point) root-point-start)
+		(goto-char (+ 1 keyword-point))
+		(insert (string-join (mapcar (lambda (k) (concat "\t" k)) (sort (delete-dups alan-keywords ) 'string<)) "
 "))
-		  (insert "
+		(insert "
 ")
-		  (insert "
+		(insert "
 ")))))
 
 (defun alan-grammar-mode-indent-line ()
@@ -514,14 +524,14 @@ BODY can define keyword aguments.
 			 (parent-indent (if parent-position
 								(save-excursion (goto-char parent-position) (current-indentation))
 							  0))
-			(current-indent (current-indentation))
-			(previous-line-indentation (and
-										(not (bobp))
-										(save-excursion
-										  (forward-line -1)
-										  (current-indentation))))
-			(min-indentation (if parent-position (+ parent-indent tab-width) 0))
-			(max-indentation (+ previous-line-indentation tab-width)))
+			 (current-indent (current-indentation))
+			 (previous-line-indentation (and
+										 (not (bobp))
+										 (save-excursion
+										   (forward-line -1)
+										   (current-indentation))))
+			 (min-indentation (if parent-position (+ parent-indent tab-width) 0))
+			 (max-indentation (+ previous-line-indentation tab-width)))
 		(cond
 		 ((and parent-position (looking-at "\\s-*\\s)"))
 		  (setq new-indent parent-indent))
@@ -536,21 +546,18 @@ BODY can define keyword aguments.
  	(when new-indent
  	  (indent-line-to new-indent))))
 
-;;;###autoload
-(define-derived-mode alan-grammar-mode alan-language-mode "grammar"
-  "Major mode for editing m-industries schema files."
-  (modify-syntax-entry ?} "_" alan-grammar-mode-syntax-table)
-  (modify-syntax-entry ?\[ "(]" alan-grammar-mode-syntax-table)
-  (modify-syntax-entry ?\] ")[" alan-grammar-mode-syntax-table)
-  (font-lock-add-keywords nil alan-grammar-font-lock-keyword "end")
-
+;;;###autoload (autoload 'grammar "alan-mode.el")
+(alan-define-mode grammar
+	"Major mode for editing M-industries grammar files."
+  :language "dependencies/dev/internals/alan/language"
+  :pairs (("[" . "]"))
+  :keywords ((("rules" "root" "component" "indent" "keywords" "collection" "order"
+			   "predecessors" "successors" "group" "number" "reference" "stategroup"
+			   "has" "first" "last" "predecessor" "successor" "text" "[" "]" ","
+			   ) . font-lock-builtin-face))
   (electric-indent-local-mode -1)
   (local-set-key (kbd "RET") 'newline-and-indent)
   (set (make-local-variable 'indent-line-function) 'alan-grammar-mode-indent-line))
-
-;;; template mode
-
-(add-to-list `auto-mode-alist '("\\.template$" . alan-template-mode))
 
 (defun alan-template-yank ()
   "Yank but wrap as template."
@@ -559,159 +566,91 @@ BODY can define keyword aguments.
 	(insert (mapconcat 'identity
 					   (mapcar (lambda (s)
 								 (format "\"%s\"" (replace-regexp-in-string "\"" "\\\\\"" s)))
-					   (split-string string-to-yank "\n"))
-			   "\n"))))
+							   (split-string string-to-yank "\n"))
+					   "\n"))))
 
 ;;;###autoload
-(define-derived-mode alan-template-mode alan-language-mode "template"
-  "Major mode for editing m-industries template files."
-  (modify-syntax-entry ?` "w")
-  (modify-syntax-entry ?\[ "(]")
-  (modify-syntax-entry ?\] ")[")
-  (setq alan-language-definition (concat (alan-project-root) "dependencies/dev/internals/alan-to-text-transformation/language")))
-
-;;; Application modes
-
-(defcustom alan-script "alan"
-  "The alan build script file."
-  :group 'alan
-  :type '(string))
-(make-variable-buffer-local 'alan-script)
-
-;;;###autoload
-(define-derived-mode alan-project-mode alan-mode "alan project"
-  "Abstract major mode for editing m-industries project files."
-  :after-hook (alan-setup-build-system))
-
-;;; application mode
-
-(add-to-list `auto-mode-alist '("application.alan" . alan-application-mode))
+(alan-define-mode template
+	"Major mode for editing M-industries template files."
+  :file-pattern "\\.template$"
+  :language "dependencies/dev/internals/alan-to-text-transformation/language")
 
 (defun alan-list-nummerical-types ()
   "Return a list of all nummerical types."
   (save-mark-and-excursion
-   (save-restriction
-	 (widen)
-	 (goto-char (point-max))
-	 (let ((numerical-types-point (re-search-backward "^numerical-types"))
-		   (numerical-types (list)))
-	   (when numerical-types-point
-		 (while (re-search-forward "^\\s-*'\\([^']*\\)'" nil t)
-		   (add-to-list 'numerical-types (match-string 1))))
-	   numerical-types))))
-
-(defconst alan-application-font-lock-keyword
-  `(
-	("\\(:\\|:=\\)\\s-+\\(stategroup\\|component\\|group\\|file\\|dictionary\\|command\\|matrix\\|reference\\|natural\\|integer\\|text\\)\\(\\s-+\\|$\\)" 2 font-lock-type-face)
-	(,(regexp-opt '("add" "branch" "ceil" "convert" "count" "division" "floor"
-	"increment" "max" "min" "remainder" "subtract" "sum" "sumlist" "base" "diff" "product"))
-	 . font-lock-function-name-face)
-	(,(regexp-opt '("today" "now" "zero" "true" "false")) . font-lock-constant-face)
-	(,(regexp-opt '("@%^" "@" "@?^" "@date" "@date-time" "@default:"
-					"@description:" "@desired" "@dormant" "@duration:"
-					"@factor:" "@guid" "@hidden" "@identifying"
-					"@key-description:" "@label:" "@linked" "@max:" "@metadata"
-					"@min:" "@multi-line" "@name" "@namespace" "@small"
-					"@sticky" "@validate:" "@verified" "@visible" )) . font-lock-keyword-face)
-	(,(regexp-opt '("#" "#reader" "#writer" "$" "$^" "%" "%^" "%}" "&#" "&" "*"
-					"+" "+^" "," "-" "-<" "->" "." ".^" ".key" ".self" ".}" "/"
-					"10^" ":" ":=" "<" "<-" "<=" "=" "==" "=>" ">" ">=" ">key"
-					"?" "?^" "@%^" "@" "@?^" "@date" "@date-time" "@default:"
-					"@description:" "@desired" "@dormant" "@duration:"
-					"@factor:" "@guid" "@hidden" "@identifying"
-					"@key-description:" "@label:" "@linked" "@max:" "@metadata"
-					"@min:" "@multi-line" "@name" "@namespace" "@small"
-					"@sticky" "@validate:" "@verified" "@visible" "[" "]" "^"
-					"acyclic-graph" "add" "and" "anonymous" "any" "as" "base"
-					"ceil" "collection" "command" "component" "count" "create"
-					"created" "creation-time" "delete" "dense" "deprecated"
-					"dictionary" "diff" "division" "do" "dynamic" "entry"
-					"external" "false" "file" "floor" "forward" "from" "group"
-					"hours" "if" "ignore" "in" "increment" "integer" "interface"
-					"invalidate" "inverse" "join" "life-time" "log" "mapping"
-					"match" "match-branch" "matrix" "max" "min" "minutes"
-					"mutation-time" "natural" "new" "node" "now" "number"
-					"numerical-types" "on" "one" "ontimeout" "ordered-graph"
-					"password" "product" "reference" "reference-set"
-					"referencer" "remainder" "remove" "rename" "roles" "root"
-					"seconds" "space" "sparse" "stategroup" "std" "subtract"
-					"sum" "sumlist" "switch" "text" "timer" "today" "true"
-					"union" "unsafe" "update" "users" "with" "workfor" "zero"
-					"|" "~>" )) . font-lock-builtin-face))
-  "Highlight keywords for alan application mode.")
-
-(defalias 'alan-application-syntax-propertize-function
-  (syntax-propertize-rules ("[\\.%]\\(}\\)" (1 "_")))
-  "Special rules for Alan application keywords that should not have the close syntax.")
+	(save-restriction
+	  (widen)
+	  (goto-char (point-max))
+	  (let ((numerical-types-point (re-search-backward "^numerical-types"))
+			(numerical-types (list)))
+		(when numerical-types-point
+		  (while (re-search-forward "^\\s-*'\\([^']*\\)'" nil t)
+			(add-to-list 'numerical-types (match-string 1))))
+		numerical-types))))
 
 ;;;###autoload
-(define-derived-mode alan-application-mode alan-project-mode "alan application"
-  "Major mode for editing m-industries application model files."
-  (set (make-local-variable 'syntax-propertize-function) #'alan-application-syntax-propertize-function)
-  (font-lock-add-keywords nil alan-application-font-lock-keyword "at end")
-  (modify-syntax-entry ?\] "_" alan-mode-syntax-table)
-  (modify-syntax-entry ?\[ "_" alan-mode-syntax-table)
-  (modify-syntax-entry ?{ "(}" alan-mode-syntax-table)
-  (modify-syntax-entry ?} "){" alan-mode-syntax-table))
+(alan-define-mode application
+	"Major mode for editing M-industries application model files."
+  :pairs (("{" . "}"))
+  :keywords (
+			 ("\\(:\\|:=\\)\\s-+\\(stategroup\\|component\\|group\\|file\\|dictionary\\|command\\|matrix\\|reference\\|natural\\|integer\\|text\\)\\(\\s-+\\|$\\)" 2 font-lock-type-face)
+			 (("add" "branch" "ceil" "convert" "count" "division" "floor" "increment"
+			   "max" "min" "remainder" "subtract" "sum" "sumlist" "base" "diff"
+			   "product")
+			  . font-lock-function-name-face)
+			 (("today" "now" "zero" "true" "false") . font-lock-constant-face)
+			 (("@%^" "@" "@?^" "@date" "@date-time" "@default:" "@description:"
+			   "@desired" "@dormant" "@duration:" "@factor:" "@guid" "@hidden"
+			   "@identifying" "@key-description:" "@label:" "@linked" "@max:"
+			   "@metadata" "@min:" "@multi-line" "@name" "@namespace" "@small" "@sticky"
+			   "@validate:" "@verified" "@visible" ) . font-lock-keyword-face)
+			 (("#" "#reader" "#writer" "$" "$^" "%" "%^" "%}" "&#" "&" "*" "+" "+^" ","
+			   "-" "-<" "->" "." ".^" ".key" ".self" ".}" "/" "10^" ":" ":=" "<" "<-"
+			   "<=" "=" "==" "=>" ">" ">=" ">key" "?" "?^" "@%^" "@" "@?^" "@date"
+			   "@date-time" "@default:" "@description:" "@desired" "@dormant"
+			   "@duration:" "@factor:" "@guid" "@hidden" "@identifying"
+			   "@key-description:" "@label:" "@linked" "@max:" "@metadata" "@min:"
+			   "@multi-line" "@name" "@namespace" "@small" "@sticky" "@validate:"
+			   "@verified" "@visible" "[" "]" "^" "acyclic-graph" "add" "and" "anonymous"
+			   "any" "as" "base" "ceil" "collection" "command" "component" "count"
+			   "create" "created" "creation-time" "delete" "dense" "deprecated"
+			   "dictionary" "diff" "division" "do" "dynamic" "entry" "external" "false"
+			   "file" "floor" "forward" "from" "group" "hours" "if" "ignore" "in"
+			   "increment" "integer" "interface" "invalidate" "inverse" "join"
+			   "life-time" "log" "mapping" "match" "match-branch" "matrix" "max" "min"
+			   "minutes" "mutation-time" "natural" "new" "node" "now" "number"
+			   "numerical-types" "on" "one" "ontimeout" "ordered-graph" "password"
+			   "product" "reference" "reference-set" "referencer" "remainder" "remove"
+			   "rename" "roles" "root" "seconds" "space" "sparse" "stategroup" "std"
+			   "subtract" "sum" "sumlist" "switch" "text" "timer" "today" "true" "union"
+			   "unsafe" "update" "users" "with" "workfor" "zero" "|" "~>" ) . font-lock-builtin-face))
+  :propertize-rules (("[\\.%]\\(}\\)" (1 "_"))))
 
-;;; widget mode
+(alan-define-mode widget
+	"Major mode for editing M-industries widget model files."
+  :file-pattern "widgets/.*\\.ui\\.alan$"
+  :pairs (("{" . "}") ("[" . "]"))
+  :keywords ((( "#" "$" "*" "," "->" "."  ".}"  ":" "::" "=>" ">" ">>" "?"  "@"
+				"^" "binding" "configuration" "control" "current" "dictionary"
+				"empty" "engine" "file" "format" "inline" "instruction" "interval"
+				"let" "list" "markup" "number" "on" "set" "state" "stategroup"
+				"static" "switch" "text" "time" "to" "transform" "unconstrained"
+				"view" "widget" "window" "|" ) . font-lock-builtin-face))
+  :propertize-rules (("\\.\\(}\\)" (1 "_"))))
 
-(add-to-list `auto-mode-alist '("widgets/.*\\.ui\\.alan$" . alan-widget-mode))
-
-(defconst alan-widget-font-lock-keyword
-  `((,(regexp-opt
-	   '( "#" "$" "*" "," "->" "."  ".}"  ":" "::" "=>" ">" ">>" "?"  "@" "^"
-		  "binding" "configuration" "control" "current" "dictionary" "empty"
-		  "engine" "file" "format" "inline" "instruction" "interval" "let"
-		  "list" "markup" "number" "on" "set" "state" "stategroup" "static"
-		  "switch" "text" "time" "to" "transform" "unconstrained" "view"
-		  "widget" "window" "|" )) . font-lock-builtin-face))
-  "Highlight keywords for alan widget mode.")
-
-(defalias 'alan-widget-syntax-propertize-function
-  (syntax-propertize-rules ("\\.\\(}\\)" (1 "_")))
-  "Special rules for Alan keywords that should not have the close syntax.
-In this case .} denotes a matrix key and not a close
-matching. This is to prevent inbalanced pairs.")
-
-;;;###autoload
-(define-derived-mode alan-widget-mode alan-project-mode "widget"
-  "Major mode for editing m-industries widget model files."
-  (set (make-local-variable 'syntax-propertize-function) #'alan-widget-syntax-propertize-function)
-  (font-lock-add-keywords nil alan-widget-font-lock-keyword "at end")
-  (modify-syntax-entry ?} "){" alan-mode-syntax-table)
-  (modify-syntax-entry ?{ "(}" alan-mode-syntax-table)
-  (modify-syntax-entry ?\[ "(]" alan-mode-syntax-table)
-  (modify-syntax-entry ?\] ")[" alan-mode-syntax-table))
-
-;;; views mode
-
-(add-to-list `auto-mode-alist '("views/.*\\.ui\\.alan$" . alan-views-mode))
-
-(defconst alan-views-font-lock-keyword
-  `((,(regexp-opt
-	   '( "$" "%" "%^" "%}" "*" "+" "+^" "-" "->" "."  ".>" ".^" "/%}" "/>"
-		  ":>" "<" "<<" "<=" "=" "==" ">" ">=" ">>" "?"  "?^" "@" "as"
-		  "candidates" "collection" "command" "disabled" "enabled" "entity"
-		  "file" "filter" "from" "group" "id" "inline" "key" "limit" "link"
-		  "matrix" "node" "none" "now" "number" "of" "on" "open" "path" "query"
-		  "reference" "refresh" "role" "root" "selected" "stategroup"
-		  "subscribe" "text" "using" "view" "window")) . font-lock-builtin-face))
-  "Highlight keywords for alan views mode.")
-
-(defalias 'alan-views-syntax-propertize-function
-  (syntax-propertize-rules ("/?%\\(}\\)" (1 "_")))
-  "Special rules for Alan keywords that shouldn't have the close syntax.")
-
-;;;###autoload
-(define-derived-mode alan-views-mode alan-project-mode "alan views"
-  "Major mode for editing M-industries views files."
-  (set (make-local-variable 'syntax-propertize-function) #'alan-views-syntax-propertize-function)
-  (font-lock-add-keywords nil alan-views-font-lock-keyword "at end")
-  (modify-syntax-entry ?} "){" alan-mode-syntax-table)
-  (modify-syntax-entry ?{ "(}" alan-mode-syntax-table)
-  (modify-syntax-entry ?\[ "(]" alan-mode-syntax-table)
-  (modify-syntax-entry ?\] ")[" alan-mode-syntax-table))
+(alan-define-mode views
+	"Major mode for editing M-industries views files."
+  :pairs (("{" . "}") ("[" . "]"))
+  :file-pattern "views/.*\\.ui\\.alan$"
+  :propertize-rules (("/?%\\(}\\)" (1 "_")))
+  :keywords ((( "$" "%" "%^" "%}" "*" "+" "+^" "-" "->" "."  ".>" ".^" "/%}" "/>"
+				":>" "<" "<<" "<=" "=" "==" ">" ">=" ">>" "?"  "?^" "@" "as"
+				"candidates" "collection" "command" "disabled" "enabled" "entity"
+				"file" "filter" "from" "group" "id" "inline" "key" "limit" "link"
+				"matrix" "node" "none" "now" "number" "of" "on" "open" "path"
+				"query" "reference" "refresh" "role" "root" "selected"
+				"stategroup" "subscribe" "text" "using" "view" "window")
+			  . font-lock-builtin-face)))
 
 (provide 'alan-mode)
 
