@@ -278,6 +278,57 @@ Not suitable for white space significant languages."
 			 (force-mode-line-update)))
 		 (current-buffer))))
 
+(defmacro alan--define-language (name &optional docstring &rest body)
+  "Define NAME as an Alan major mode.
+
+BODY can define keyword aguments.
+:file-pattern FILE-PATTERN
+	The file pattern to associate with the major mode. If none is
+	provided it will associate it with NAME.alan.
+:keywords
+	A list of cons cells where the first is a regexp or a list of keywords
+	and the second element is the font-face."
+
+  (declare (doc-string 2) (indent 2))
+  ;; check the language property
+  (let ((mode-name (intern (concat "alan-" (symbol-name name) "-mode")))
+		(font-lock-name (concat "alan-" (symbol-name name) "-font-lock-keywords"))
+		(file-pattern (concat (symbol-name name) ".alan"))
+		(keywords))
+
+	;; Process the keyword args.
+    (while (keywordp (car body))
+      (pcase (pop body)
+		(`:file-pattern (setq file-pattern (pop body)))
+		(`:keywords (setq keywords (pop body)))
+		(_ (pop body))))
+
+	(when keywords
+		  (setq keywords (mapcar (lambda (keyword-entry)
+					(if (stringp (car keyword-entry))
+						keyword-entry
+					  (cons (regexp-opt (car keyword-entry)) (cdr keyword-entry)))
+					) keywords)))
+
+	`(progn
+	   (add-to-list 'auto-mode-alist '("schema.alan" . alan-schema-mode))
+	   ,(when keywords
+		  `(progn
+			 (defconst ,font-lock-name
+		  	   ,keywords
+		  	   ,(concat "Highlight keywords for Alan " (symbol-name name) " mode."))))
+
+	   (define-derived-mode ,mode-name alan-mode ,(symbol-name name)
+		 ,docstring
+		 :group 'alan
+		 ,(when keywords
+			`(progn
+			   (font-lock-add-keywords nil ,font-lock-name "at end")))
+		 ,@body))))
+
+(alan--define-language build "A major mode for editting build files"
+  :keywords (("->\\s-+\\(stategroup\\|component\\|group\\|dictionary\\|command\\|densematrix\\|sparsematrix\\|reference\\|number\\|text\\)\\(\\s-+\\|$\\)" 1 font-lock-type-face)))
+
 ;;;###autoload
 (define-derived-mode alan-mode prog-mode "Alan"
   "Major mode for editing m-industries alan files."
