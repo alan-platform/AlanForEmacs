@@ -160,7 +160,7 @@ The rest of the BODY is evaluated in the body of the derived-mode."
 							   ) keywords)))
 
 	`(progn
-	   (add-to-list 'auto-mode-alist '(,file-pattern . alan-schema-mode))
+	   (add-to-list 'auto-mode-alist '(,file-pattern . ,mode-name))
 	   ,(when keywords
 		  `(progn
 			 (defconst ,font-lock-name
