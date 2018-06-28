@@ -129,9 +129,6 @@ BODY can define keyword aguments.
 The rest of the BODY is evaluated in the body of the derived-mode."
 
   (declare
-   ;; make sure that we can jump to the mode definition.
-   (debug (&define (intern (concat "alan-" (symbol-name name) "-mode")) symbolp sexp [&optional stringp]
-				   [&rest keywordp sexp] def-body)) ;;todo check if this is correct.
    (doc-string 2)
    (indent 2))
   (let ((mode-name (intern (concat "alan-" (symbol-name name) "-mode")))
@@ -161,12 +158,7 @@ The rest of the BODY is evaluated in the body of the derived-mode."
 
 	`(progn
 	   (add-to-list 'auto-mode-alist '(,file-pattern . ,mode-name))
-	   ,(when keywords
-		  `(progn
-			 (defconst ,font-lock-name
-		  	   ',keywords
-		  	   ,(concat "Highlight keywords for Alan " (symbol-name name) " mode."))))
-
+	   
 	   (define-derived-mode ,mode-name alan-mode ,(symbol-name name)
 		 ,docstring
 		 :group 'alan
@@ -177,7 +169,7 @@ The rest of the BODY is evaluated in the body of the derived-mode."
 			   (setq alan-language-definition ,language)))
 		 ,(when keywords
 			`(progn
-			   (font-lock-add-keywords nil ,font-lock-name "at end")))
+			   (font-lock-add-keywords nil ',keywords "at end")))
 		 ,@(mapcar
 		   (lambda (pair)
 			 `(progn
