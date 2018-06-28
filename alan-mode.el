@@ -473,7 +473,7 @@ Return nil if the script can not be found."
 	("number" "^\\s-+'\\(\\(?:\\sw\\|\\s-+\\)*\\)'\\s-+->\\s-* number" 1)
 	("matrix" "^\\s-+'\\(\\(?:\\sw\\|\\s-+\\)*\\)'\\s-+->\\s-* \\(?:dense\\|sparse\\)matrix" 1)))
 
-;;;###autoload (autoload 'schema "alan-mode.el")
+;;;###autoload (autoload 'alan-schema-mode "alan-mode")
 (alan-define-mode alan-schema-mode
 	"Major mode for editing M-industries schema files."
   :language "dependencies/dev/internals/alan/language"
@@ -548,7 +548,7 @@ Return nil if the script can not be found."
  	(when new-indent
  	  (indent-line-to new-indent))))
 
-;;;###autoload (autoload 'grammar "alan-mode.el")
+;;;###autoload (autoload 'alan-grammar-mode "alan-mode")
 (alan-define-mode alan-grammar-mode
 	"Major mode for editing M-industries grammar files."
   :language "dependencies/dev/internals/alan/language"
@@ -571,7 +571,7 @@ Return nil if the script can not be found."
 							   (split-string string-to-yank "\n"))
 					   "\n"))))
 
-;;;###autoload
+;;;###autoload (autoload 'alan-template-mode "alan-mode")
 (alan-define-mode alan-template-mode
 	"Major mode for editing M-industries template files."
   :file-pattern "\\.template$"
@@ -590,7 +590,7 @@ Return nil if the script can not be found."
 			(add-to-list 'numerical-types (match-string 1))))
 		numerical-types))))
 
-;;;###autoload
+;;;###autoload (autoload 'alan-application-mode "alan-mode")
 (alan-define-mode alan-application-mode
 	"Major mode for editing M-industries application model files."
   :pairs (("{" . "}"))
@@ -628,6 +628,7 @@ Return nil if the script can not be found."
 			   "unsafe" "update" "users" "with" "workfor" "zero" "|" "~>" ) . font-lock-builtin-face))
   :propertize-rules (("[\\.%]\\(}\\)" (1 "_"))))
 
+;;;###autoload (autoload 'alan-widget-mode "alan-mode")
 (alan-define-mode alan-widget-mode
 	"Major mode for editing M-industries widget model files."
   :file-pattern "widgets/.*\\.ui\\.alan$"
@@ -640,6 +641,7 @@ Return nil if the script can not be found."
 				"view" "widget" "window" "|" ) . font-lock-builtin-face))
   :propertize-rules (("\\.\\(}\\)" (1 "_"))))
 
+;;;###autoload (autoload 'alan-views-mode "alan-mode")
 (alan-define-mode alan-views-mode
 	"Major mode for editing M-industries views files."
   :pairs (("{" . "}") ("[" . "]"))
