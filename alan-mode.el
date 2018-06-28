@@ -9,7 +9,7 @@
 ;; URL: https://github.com/M-industries/AlanForEmacs
 ;; Homepage: https://alan-platform.com/
 ;; Keywords: alan, languages
-;; Package-Requires: ((flycheck "32") (emacs "25.1"))
+;; Package-Requires: ((flycheck "32") (emacs "25.1") (s "1.12"))
 
 ;; MIT License
 
@@ -42,6 +42,7 @@
 (require 'flycheck)
 (require 'timer)
 (require 'xref)
+(require 's)
 
 ;;; Code:
 
@@ -131,13 +132,15 @@ The rest of the BODY is evaluated in the body of the derived-mode."
   (declare
    (doc-string 2)
    (indent 2))
-  (let ((mode-name (intern (concat "alan-" (symbol-name name) "-mode")))
-		(font-lock-name (intern (concat "alan-" (symbol-name name) "-font-lock-keywords")))
-		(file-pattern (concat (symbol-name name) ".alan"))
-		(keywords)
-		(language)
-		(pairs '())
-		(propertize-rules))
+  (let* ((mode-name (intern (concat "alan-" (symbol-name name) "-mode")))
+		 (language-name ;; name based on language naming convention.
+		  (s-chop-suffix "-mode" (s-chop-prefix "alan-" (symbol-name name))))
+		 (file-pattern ;; the naming convention for the file pattern is to use underscores.
+		  (concat (s-replace "-" "_" language-name) ".alan"))
+		 (keywords)
+		 (language)
+		 (pairs '())
+		 (propertize-rules))
 
 	;; Process the keyword args.
     (while (keywordp (car body))
@@ -157,9 +160,10 @@ The rest of the BODY is evaluated in the body of the derived-mode."
 							   ) keywords)))
 
 	`(progn
-	   (add-to-list 'auto-mode-alist '(,file-pattern . ,mode-name))
-	   
-	   (define-derived-mode ,mode-name alan-mode ,(symbol-name name)
+	   (add-to-list 'auto-mode-alist '(,file-pattern . ,name))
+	   (flycheck-add-mode 'alan ',name)
+
+	   (define-derived-mode ,name alan-mode ,language-name
 		 ,docstring
 		 :group 'alan
 		 :after-hook (alan-setup-build-system)
@@ -171,11 +175,11 @@ The rest of the BODY is evaluated in the body of the derived-mode."
 			`(progn
 			   (font-lock-add-keywords nil ',keywords "at end")))
 		 ,@(mapcar
-		   (lambda (pair)
-			 `(progn
-				(modify-syntax-entry ,(string-to-char (car pair)) ,(concat "(" (cdr pair)) alan-mode-syntax-table)
-				(modify-syntax-entry ,(string-to-char (cdr pair)) ,(concat ")" (car pair)) alan-mode-syntax-table)))
-		   pairs)
+			(lambda (pair)
+			  `(progn
+				 (modify-syntax-entry ,(string-to-char (car pair)) ,(concat "(" (cdr pair)) alan-mode-syntax-table)
+				 (modify-syntax-entry ,(string-to-char (cdr pair)) ,(concat ")" (car pair)) alan-mode-syntax-table)))
+			pairs)
 		 ,(when propertize-rules
 			`(progn
 			   (set (make-local-variable 'syntax-propertize-function) (syntax-propertize-rules ,@propertize-rules))))
@@ -406,20 +410,16 @@ Not suitable for white space significant languages."
 					 (zero-or-more "\n " (zero-or-more not-newline)))
 			line-end))
   :error-filter alan-flycheck-error-filter
-  :modes (alan-mode
-		  alan-schema-mode
-		  alan-grammar-mode
-		  alan-template-mode
-		  alan-application-mode
-		  alan-widget-mode
-		  alan-annotations-mode))
+  :modes (alan-mode)) ;; all other modes are added using the `alan-define-mode' macro.
 (add-to-list 'flycheck-checkers 'alan)
 
 ;;; Project root and build system
 
 (defvar-local alan-project-root nil)
 (defvar-local alan-project-file "versions.json"
-  "The project file to base the project root on. The language mode will set this to project.json.")
+  "The project file to identify the `alan-project-root'.
+When setting the `:language' property of the `alan-define-mode'
+this will be set to project.json.")
 (defun alan-project-root ()
   "Project root folder determined based on the presence of a project.json or versions.json file."
   (or
@@ -439,15 +439,15 @@ Not suitable for white space significant languages."
 		(alan-project-language (concat (alan-project-root) alan-language-definition)))
 	(set (make-local-variable 'compilation-error-screen-columns) nil)
 	(cond
-	 ((file-executable-p alan-project-script)
+	 ((and (file-executable-p alan-project-script) (string= alan-project-file "versions.json"))
 	  (setq flycheck-alan-executable alan-project-script)
 	  (set (make-local-variable 'compile-command) (concat alan-project-script " build emacs ")))
-	 ((file-executable-p alan-project-compiler)
+	 ((and (file-executable-p alan-project-compiler) (string= alan-project-file "project.json"))
 	  (setq flycheck-alan-executable alan-project-compiler)
 	  (setq alan--flycheck-language-definition alan-project-language)
 	  (set (make-local-variable 'compile-command)
 		   (concat alan-project-compiler " " alan-project-language " --format emacs --log warning /dev/null ")))
-	 ((executable-find alan-script)
+	 ((and (executable-find alan-script) (string= alan-project-file "versions.json"))
 	  (setq flycheck-alan-executable alan-script)
 	  (set (make-local-variable 'compile-command) (concat alan-script " build emacs ")))
 	 (t (message "No alan compiler or script found.")))))
@@ -464,7 +464,7 @@ Not suitable for white space significant languages."
 	("matrix" "^\\s-+'\\(\\(?:\\sw\\|\\s-+\\)*\\)'\\s-+->\\s-* \\(?:dense\\|sparse\\)matrix" 1)))
 
 ;;;###autoload (autoload 'schema "alan-mode.el")
-(alan-define-mode schema
+(alan-define-mode alan-schema-mode
 	"Major mode for editing M-industries schema files."
   :language "dependencies/dev/internals/alan/language"
   :keywords (("->\\s-+\\(stategroup\\|component\\|group\\|dictionary\\|command\\|densematrix\\|sparsematrix\\|reference\\|number\\|text\\)\\(\\s-+\\|$\\)" 1 font-lock-type-face)
@@ -539,7 +539,7 @@ Not suitable for white space significant languages."
  	  (indent-line-to new-indent))))
 
 ;;;###autoload (autoload 'grammar "alan-mode.el")
-(alan-define-mode grammar
+(alan-define-mode alan-grammar-mode
 	"Major mode for editing M-industries grammar files."
   :language "dependencies/dev/internals/alan/language"
   :pairs (("[" . "]"))
@@ -562,7 +562,7 @@ Not suitable for white space significant languages."
 					   "\n"))))
 
 ;;;###autoload
-(alan-define-mode template
+(alan-define-mode alan-template-mode
 	"Major mode for editing M-industries template files."
   :file-pattern "\\.template$"
   :language "dependencies/dev/internals/alan-to-text-transformation/language")
@@ -581,7 +581,7 @@ Not suitable for white space significant languages."
 		numerical-types))))
 
 ;;;###autoload
-(alan-define-mode application
+(alan-define-mode alan-application-mode
 	"Major mode for editing M-industries application model files."
   :pairs (("{" . "}"))
   :keywords (
@@ -618,7 +618,7 @@ Not suitable for white space significant languages."
 			   "unsafe" "update" "users" "with" "workfor" "zero" "|" "~>" ) . font-lock-builtin-face))
   :propertize-rules (("[\\.%]\\(}\\)" (1 "_"))))
 
-(alan-define-mode widget
+(alan-define-mode alan-widget-mode
 	"Major mode for editing M-industries widget model files."
   :file-pattern "widgets/.*\\.ui\\.alan$"
   :pairs (("{" . "}") ("[" . "]"))
@@ -630,7 +630,7 @@ Not suitable for white space significant languages."
 				"view" "widget" "window" "|" ) . font-lock-builtin-face))
   :propertize-rules (("\\.\\(}\\)" (1 "_"))))
 
-(alan-define-mode views
+(alan-define-mode alan-views-mode
 	"Major mode for editing M-industries views files."
   :pairs (("{" . "}") ("[" . "]"))
   :file-pattern "views/.*\\.ui\\.alan$"
