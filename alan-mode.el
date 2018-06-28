@@ -433,13 +433,26 @@ this will be set to project.json.")
 
 (defvar-local alan-language-definition nil)
 
+(defun alan-find-alan-script ()
+  "Try to find the alan script in the dominating directory starting from the `alan-project-root'.
+Return nil if the script can not be found."
+  (when-let ((alan-project-script
+			  (locate-dominating-file
+			   (alan-project-root)
+			   (lambda (name)
+				 (let ((alan-script-candidate (concat name "alan")))
+				   (and (file-executable-p alan-script-candidate)
+						(not (file-directory-p alan-script-candidate))))))))
+	(concat alan-project-script "alan")))
+
 (defun alan-setup-build-system ()
-  (let ((alan-project-script (concat (alan-project-root) "/alan"))
+  (let ((alan-project-script (or (alan-find-alan-script)
+								 (executable-find alan-script)))
 		(alan-project-compiler (concat (alan-project-root) "dependencies/dev/internals/alan/tools/compiler-project"))
 		(alan-project-language (concat (alan-project-root) alan-language-definition)))
 	(set (make-local-variable 'compilation-error-screen-columns) nil)
 	(cond
-	 ((and (file-executable-p alan-project-script) (string= alan-project-file "versions.json"))
+	 ((and alan-project-script (string= alan-project-file "versions.json"))
 	  (setq flycheck-alan-executable alan-project-script)
 	  (set (make-local-variable 'compile-command) (concat alan-project-script " build emacs ")))
 	 ((and (file-executable-p alan-project-compiler) (string= alan-project-file "project.json"))
@@ -447,9 +460,6 @@ this will be set to project.json.")
 	  (setq alan--flycheck-language-definition alan-project-language)
 	  (set (make-local-variable 'compile-command)
 		   (concat alan-project-compiler " " alan-project-language " --format emacs --log warning /dev/null ")))
-	 ((and (executable-find alan-script) (string= alan-project-file "versions.json"))
-	  (setq flycheck-alan-executable alan-script)
-	  (set (make-local-variable 'compile-command) (concat alan-script " build emacs ")))
 	 (t (message "No alan compiler or script found.")))))
 
 ;;; Modes
