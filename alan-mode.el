@@ -72,7 +72,7 @@ resolved to an existing directory."
 ;;; Alan mode
 
 (defvar-local alan-mode-font-lock-keywords
-  '((("'[^']*?'" . font-lock-variable-name-face))
+  '((("'[^'\n]*?'" . font-lock-variable-name-face))
 	nil nil nil nil
 	(font-lock-syntactic-face-function . alan-font-lock-syntactic-face-function))
   "Highlighting for alan mode")
