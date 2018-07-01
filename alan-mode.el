@@ -61,18 +61,16 @@ This one is used when the variable `alan-project-root' cannot be
 resolved to an existing directory."
   :group 'alan
   :type '(string))
-(make-variable-buffer-local 'alan-compiler)
 
 (defcustom alan-script "alan"
   "The alan build script file."
   :group 'alan
   :type '(string))
-(make-variable-buffer-local 'alan-script)
 
 ;;; Alan mode
 
 (defvar-local alan-mode-font-lock-keywords
-  '((("'[^'\n]*?'" . font-lock-variable-name-face))
+  '((("'\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'" . font-lock-variable-name-face))
 	nil nil nil nil
 	(font-lock-syntactic-face-function . alan-font-lock-syntactic-face-function))
   "Highlighting for alan mode")
@@ -105,7 +103,7 @@ resolved to an existing directory."
   (add-hook 'post-command-hook #'alan-update-header nil t)
   (setq header-line-format ""))
 
-(defvar alan-parent-regexp "\\s-*\\('[^']*?'\\)")
+(defvar alan-parent-regexp "\\s-*\\('\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'\\)")
 
 (defmacro alan-define-mode (name &optional docstring &rest body)
   "Define NAME as an Alan major mode.
@@ -114,7 +112,7 @@ The mode derives from the generic `alan-mode'.
 
 BODY can define keyword aguments.
 :file-pattern
-	The file pattern to associate with the major mode. If none is
+	The file pattern to associate with the major mode.  If none is
 	provided it will associate it with NAME.alan.
 :keywords
 	A list of cons cells where the first is a regexp or a list of keywords
@@ -127,7 +125,8 @@ BODY can define keyword aguments.
 	A list of rules used by `syntax-propertize-rules' When set will set the
 	propertize function for this mode.
 
-The rest of the BODY is evaluated in the body of the derived-mode."
+The rest of the BODY is evaluated in the body of the derived-mode.
+Optional argument DOCSTRING for the major mode."
 
   (declare
    (doc-string 2)
@@ -188,15 +187,15 @@ The rest of the BODY is evaluated in the body of the derived-mode."
 ;;; Xref backend
 
 (defun alan-boundry-of-identifier-at-point ()
+  "Return the beginning and end of an alan identifier or nil if point is not on an identifier."
   (let ((text-properties (nth 1 (text-properties-at (point)))))
 	(when (or (and (listp text-properties)
 				   (member font-lock-variable-name-face text-properties))
 			  (eq font-lock-variable-name-face text-properties))
 	  (save-excursion
-		(let ((beginning (search-backward "'"))
-			  (end (search-forward "'" nil nil 2)))
-		  (if (and beginning end)
-			  (cons beginning end)))))))
+		(when-let* ((beginning (nth 8 (syntax-ppss)))
+				   (end (progn (goto-char beginning) (forward-sexp) (point))))
+		  (cons beginning end))))))
 (put 'identifier 'bounds-of-thing-at-point 'alan-boundry-of-identifier-at-point)
 (defun alan-thing-at-point ()
   "Find alan variable at point."
@@ -239,7 +238,7 @@ The rest of the BODY is evaluated in the body of the derived-mode."
 			(save-restriction
 			  (widen)
 			  (goto-char (point-min))
-			  (while (re-search-forward "^\\s-*\\('[^']*?'\\)" nil t)
+			  (while (re-search-forward "^\\s-*\\('\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'\\)" nil t)
 				(when (string= (match-string 1) symbol)
 				  (add-to-list 'xrefs (alan--xref-make-xref symbol "" buffer (match-beginning 1)) t))))))))
 	xrefs))
@@ -256,7 +255,7 @@ The rest of the BODY is evaluated in the body of the derived-mode."
       (save-restriction
         (widen)
         (goto-char (point-min))
-        (while (re-search-forward "^\\s-*\\('[^']*?'\\)" nil t)
+        (while (re-search-forward "^\\s-*\\('\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'\\)" nil t)
           (add-to-list 'words (match-string-no-properties 1)))
         (seq-uniq words)))))
 
@@ -278,7 +277,7 @@ The rest of the BODY is evaluated in the body of the derived-mode."
 		(defvar new-point)
 		(while (and (not (bobp))
 					(> start-indent 0)
-					(or (not (looking-at "\\s-*'[^']*?'"))
+					(or (not (looking-at "\\s-*'\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'"))
 						(looking-at line-to-ignore-regex)
 						(> (current-indentation) curr-indent)
 						(<= start-indent (current-indentation))))
@@ -359,7 +358,8 @@ Not suitable for white space significant languages."
 	  (indent-line-to new-indent))))
 
 (defun alan-font-lock-syntactic-face-function (state)
-  "Don't fontify single quoted strings."
+  "Don't fontify single quoted strings.
+STATE is the result of the function `parse-partial-sexp'."
   (if (nth 3 state)
       (let ((startpos (nth 8 state)))
         (if (eq (char-after startpos) ?')
@@ -595,17 +595,18 @@ Return nil if the script can not be found."
 	"Major mode for editing M-industries application model files."
   :pairs (("{" . "}"))
   :keywords (
-			 ("\\(:\\|:=\\)\\s-+\\(stategroup\\|component\\|group\\|file\\|dictionary\\|command\\|matrix\\|reference\\|natural\\|integer\\|text\\)\\(\\s-+\\|$\\)" 2 font-lock-type-face)
+			 ("\\(:\\|:=\\)\\s-+\\(stategroup\\|component\\|group\\|file\\|collection\\|command\\|reference-set\\|natural\\|integer\\|text\\)\\(\\s-+\\|$\\)" 2 font-lock-type-face)
 			 (("add" "branch" "ceil" "convert" "count" "division" "floor" "increment"
 			   "max" "min" "remainder" "subtract" "sum" "sumlist" "base" "diff"
 			   "product")
 			  . font-lock-function-name-face)
 			 (("today" "now" "zero" "true" "false") . font-lock-constant-face)
-			 (("@%^" "@" "@?^" "@date" "@date-time" "@default:" "@description:"
-			   "@desired" "@dormant" "@duration:" "@factor:" "@guid" "@hidden"
+			 (( "@date" "@date-time" "@default:" "@description:" "@desired"
+			   "@dormant" "@duration:" "@factor:" "@guid" "@hidden"
 			   "@identifying" "@key-description:" "@label:" "@linked" "@max:"
-			   "@metadata" "@min:" "@multi-line" "@name" "@namespace" "@small" "@sticky"
-			   "@validate:" "@verified" "@visible" ) . font-lock-keyword-face)
+			   "@metadata" "@min:" "@multi-line" "@name" "@namespace" "@small"
+			   "@sticky" "@validate:" "@verified" "@visible" )
+			   . font-lock-keyword-face)
 			 (("#" "#reader" "#writer" "$" "$^" "%" "%^" "%}" "&#" "&" "*" "+" "+^" ","
 			   "-" "-<" "->" "." ".^" ".key" ".self" ".}" "/" "10^" ":" ":=" "<" "<-"
 			   "<=" "=" "==" "=>" ">" ">=" ">key" "?" "?^" "@%^" "@" "@?^" "@date"
