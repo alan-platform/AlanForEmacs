@@ -168,7 +168,6 @@ Optional argument DOCSTRING for the major mode."
 		 :after-hook (alan-setup-build-system)
 		 ,(when language
 			`(progn
-			   (setq alan-project-file "project.json")
 			   (setq alan-language-definition ,language)))
 		 ,(when keywords
 			`(progn
@@ -397,10 +396,10 @@ STATE is the result of the function `parse-partial-sexp'."
   "An Alan syntax checker."
   :command ("alan"
 			(eval (if (null alan--flycheck-language-definition)
-					  '("validate" "emacs")
+					  '("build" "--format" "emacs")
 					`(,alan--flycheck-language-definition "--format" "emacs" "--log" "warning" "/dev/null"))))
   :error-patterns
-  ((error line-start (file-name) ":" line ":" column ": error:"
+  ((error line-start (file-name) ":" line ":" column ": error:" (zero-or-one " " (one-or-more digit) ":" (one-or-more digit))
 		  ;; Messages start with a white space after the error.
 		  (message (zero-or-more not-newline)
 				   (zero-or-more "\n " (zero-or-more not-newline)))
@@ -416,19 +415,18 @@ STATE is the result of the function `parse-partial-sexp'."
 ;;; Project root and build system
 
 (defvar-local alan-project-root nil)
-(defvar-local alan-project-file "versions.json"
-  "The project file to identify the `alan-project-root'.
-When setting the `:language' property of the `alan-define-mode'
-this will be set to project.json.")
 (defun alan-project-root ()
   "Project root folder determined based on the presence of a project.json or versions.json file."
   (or
    alan-project-root
    (setq alan-project-root
 		 (expand-file-name
-		  (or (locate-dominating-file default-directory alan-project-file)
+		  (or (locate-dominating-file default-directory
+									  (lambda (name)
+										(or (file-exists-p (concat name "versions.json"))
+											(file-exists-p (concat name "project.json")))))
 			  (progn
-				(message  "Couldn't locate project root folder with a %s file. Using' %s' as project root." alan-project-file default-directory)
+				(message  "Couldn't locate project root folder with a versions.json or project.json file. Using' %s' as project root." default-directory)
 				default-directory))))))
 
 (defvar-local alan-language-definition nil)
@@ -445,18 +443,25 @@ Return nil if the script can not be found."
 						(not (file-directory-p alan-script-candidate))))))))
 	(concat alan-project-script "alan")))
 
+(defun alan--file-exists (name)
+  "Return the file NAME if it exists."
+  (when (file-exists-p name) name))
+
 (defun alan-setup-build-system ()
   (let ((alan-project-script (or (alan-find-alan-script)
 								 (executable-find alan-script)))
-		(alan-project-compiler (concat (alan-project-root) "dependencies/dev/internals/alan/tools/compiler-project"))
-		(alan-project-language (concat (alan-project-root) alan-language-definition)))
+		(alan-project-compiler (or (alan--file-exists (concat (alan-project-root) "dependencies/dev/internals/alan/tools/compiler-project"))
+								   (alan--file-exists (concat (alan-project-root) "devenv/platform/project-compiler/tools/compiler-project"))))
+		(alan-project-language (concat (alan-project-root) alan-language-definition))
+		(alan-project-file (or (alan--file-exists (concat (alan-project-root) "versions.json"))
+							   (alan--file-exists (concat (alan-project-root) "project.json")))))
 	(set (make-local-variable 'compilation-error-screen-columns) nil)
 	(cond
-	 ((and alan-project-script (string= alan-project-file "versions.json"))
-	  (setq flycheck-alan-executable alan-project-script)
-	  (set (make-local-variable 'compile-command) (concat alan-project-script " build emacs ")))
-	 ((and (file-executable-p alan-project-compiler) (string= alan-project-file "project.json"))
-	  (setq flycheck-alan-executable alan-project-compiler)
+	 ((and alan-project-script (not alan-language-definition) (s-ends-with-p "versions.json" alan-project-file))
+	  (set (make-local-variable 'flycheck-alan-executable) alan-project-script)
+	  (set (make-local-variable 'compile-command) (concat alan-project-script " build --format emacs ")))
+	 ((and (file-executable-p alan-project-compiler) (file-exists-p alan-project-language))
+	  (set (make-local-variable 'flycheck-alan-executable) alan-project-compiler)
 	  (setq alan--flycheck-language-definition alan-project-language)
 	  (set (make-local-variable 'compile-command)
 		   (concat alan-project-compiler " " alan-project-language " --format emacs --log warning /dev/null ")))
@@ -655,6 +660,34 @@ Return nil if the script can not be found."
 				"matrix" "node" "none" "now" "number" "of" "on" "open" "path"
 				"query" "reference" "refresh" "role" "root" "selected"
 				"stategroup" "subscribe" "text" "using" "view" "window")
+			  . font-lock-builtin-face)))
+
+;;;###autoload (autoload 'alan-wiring-mode "alan-mode")
+(alan-define-mode alan-wiring-mode
+	"Major mode for editing Alan wiring files."
+  :keywords ((("interfaces:" "external-systems:" "systems:" "provides:"
+			   "consumes:" "provided-connections:" "from" "external" "internal"
+			   "(" ")" "."  "=" "message" "custom")
+			  . font-lock-builtin-face)))
+
+;;;###autoload (autoload 'alan-deployment-mode "alan-mode")
+(alan-define-mode alan-deployment-mode
+	"Major mode for editing Alan deployment files."
+  :language "devenv/platform/project-build-environment/language"
+  :keywords ((("external-systems:" "instance-data:" "system-options:"
+			   "provided-connections:" ":" "."  "from" "local" "remote" "stack"
+			   "system" "migrate" "timezone" "interface" "message" "custom"
+			   "socket" "schedule" "at" "never" "every" "day" "hour" "Monday"
+			   "Tuesday" "Wednesday" "Thursday" "Friday" "Saturday" "Sunday" )
+			  . font-lock-builtin-face)))
+
+;;;###autoload (autoload 'alan-mapping-mode "alan-mode")
+(alan-define-mode alan-mapping-mode
+	"Major mode for editing Alan mapping files."
+  :keywords ((("#" "%" "(" ")" "+" "."  "/" ":" ":=" "=" "=>" ">" "?"  "@" "|"
+			   "causal" "collection" "command" "do" "file" "group" "integer"
+			   "interfaces" "log" "natural" "number" "on" "reference-set"
+			   "roles" "root" "stategroup" "switch" "text" "with")
 			  . font-lock-builtin-face)))
 
 (provide 'alan-mode)
