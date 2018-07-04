@@ -37,7 +37,7 @@
 ;; This file is not part of GNU Emacs.
 
 ;;; Commentary:
-;; A major mode for editing M-industries Alan files.
+;; A major mode for editing Alan files.
 
 (require 'flycheck)
 (require 'timer)
@@ -47,6 +47,11 @@
 ;;; Code:
 
 (add-to-list 'auto-mode-alist '("\\.alan$" . alan-mode))
+
+(defgroup alan nil
+  "Alan mode."
+  :prefix "alan-"
+  :group 'tools)
 
 (defcustom alan-xref-limit-to-project-scope t
   "Limits symbol lookup to the open buffers in project scope.
@@ -66,6 +71,13 @@ resolved to an existing directory."
   "The alan build script file."
   :group 'alan
   :type '(string))
+
+(defcustom alan-language-definition nil
+  "The Alan language to use.
+Setting this will try to use the `alan-compiler' instead of the `alan-script'."
+  :group 'alan
+  :safe 'stringp)
+(make-variable-buffer-local 'alan-language-definition)
 
 ;;; Alan mode
 
@@ -88,7 +100,7 @@ resolved to an existing directory."
 
 ;;;###autoload
 (define-derived-mode alan-mode prog-mode "Alan"
-  "Major mode for editing M-industries alan files."
+  "Major mode for editing Alan files."
   :syntax-table alan-mode-syntax-table
   :group 'alan
   (setq comment-start "//")
@@ -384,6 +396,8 @@ STATE is the result of the function `parse-partial-sexp'."
 ;;; Flycheck
 
 (defun alan-flycheck-error-filter (error-list)
+  "Flycheck error filter for the Alan comopiler.
+Do not include /dev/null and only show errors for the current buffer."
   (seq-remove (lambda (error)
 				(or (string= (flycheck-error-filename error) "/dev/null")
 					(not (string= (flycheck-error-filename error) (buffer-file-name)))))
@@ -414,25 +428,34 @@ STATE is the result of the function `parse-partial-sexp'."
 
 ;;; Project root and build system
 
-(defvar-local alan-project-root nil)
+(defvar-local alan-project-root nil
+  "The project root set by function `alan-project-root'.")
 (defun alan-project-root ()
-  "Project root folder determined based on the presence of a project.json or versions.json file."
+  "Project root folder determined based on the presence of a project.json or versions.json file.
+
+If `alan-language-definition' is set prefer to use the
+project.json over versions.json."
   (or
    alan-project-root
    (setq alan-project-root
 		 (expand-file-name
-		  (or (locate-dominating-file default-directory
-									  (lambda (name)
-										(or (file-exists-p (concat name "versions.json"))
-											(file-exists-p (concat name "project.json")))))
+		  (or (let ((project-files ["versions.json" "project.json"]))
+				(seq-find
+				 #'stringp
+				 (seq-map (lambda (project-file)
+							(locate-dominating-file default-directory project-file))
+						  ;; Prefer to use project.json if `alan-language-definition' is set.
+						  (if alan-language-definition (seq-reverse project-files) project-files))))
 			  (progn
 				(message  "Couldn't locate project root folder with a versions.json or project.json file. Using' %s' as project root." default-directory)
 				default-directory))))))
 
-(defvar-local alan-language-definition nil)
+(defun alan-file-executable (file)
+  "Check if FILE is executable and return FILE."
+  (when (file-executable-p file) file))
 
 (defun alan-find-alan-script ()
-  "Try to find the alan script in the dominating directory starting from the `alan-project-root'.
+  "Try to find the alan script in the dominating directory starting from the function `alan-project-root'.
 Return nil if the script can not be found."
   (when-let ((alan-project-script
 			  (locate-dominating-file
@@ -448,23 +471,22 @@ Return nil if the script can not be found."
   (when (file-exists-p name) name))
 
 (defun alan-setup-build-system ()
+  "Setup Flycheck and the `compile-command'."
   (let ((alan-project-script (or (alan-find-alan-script)
 								 (executable-find alan-script)))
-		(alan-project-compiler (or (alan--file-exists (concat (alan-project-root) "dependencies/dev/internals/alan/tools/compiler-project"))
-								   (alan--file-exists (concat (alan-project-root) "devenv/platform/project-compiler/tools/compiler-project"))))
-		(alan-project-language (concat (alan-project-root) alan-language-definition))
-		(alan-project-file (or (alan--file-exists (concat (alan-project-root) "versions.json"))
-							   (alan--file-exists (concat (alan-project-root) "project.json")))))
+		(alan-project-compiler (cond ((alan-file-executable (concat (alan-project-root) "dependencies/dev/internals/alan/tools/compiler-project")))
+									   ((alan-file-executable (concat (alan-project-root) "devenv/platform/project-compiler/tools/compiler-project")))))
+		(alan-project-language (concat (alan-project-root) alan-language-definition)))
 	(set (make-local-variable 'compilation-error-screen-columns) nil)
 	(cond
-	 ((and alan-project-script (not alan-language-definition) (s-ends-with-p "versions.json" alan-project-file))
-	  (set (make-local-variable 'flycheck-alan-executable) alan-project-script)
-	  (set (make-local-variable 'compile-command) (concat alan-project-script " build --format emacs ")))
-	 ((and (file-executable-p alan-project-compiler) (file-exists-p alan-project-language))
+	 ((and alan-project-compiler alan-language-definition)
 	  (set (make-local-variable 'flycheck-alan-executable) alan-project-compiler)
 	  (setq alan--flycheck-language-definition alan-project-language)
 	  (set (make-local-variable 'compile-command)
 		   (concat alan-project-compiler " " alan-project-language " --format emacs --log warning /dev/null ")))
+	 ((and  alan-project-script)
+	  (setq flycheck-alan-executable alan-project-script)
+	  (set (make-local-variable 'compile-command) (concat alan-project-script " build emacs ")))
 	 (t (message "No alan compiler or script found.")))))
 
 ;;; Modes
@@ -480,7 +502,7 @@ Return nil if the script can not be found."
 
 ;;;###autoload (autoload 'alan-schema-mode "alan-mode")
 (alan-define-mode alan-schema-mode
-	"Major mode for editing M-industries schema files."
+	"Major mode for editing Alan schema files."
   :language "dependencies/dev/internals/alan/language"
   :keywords (("->\\s-+\\(stategroup\\|component\\|group\\|dictionary\\|command\\|densematrix\\|sparsematrix\\|reference\\|number\\|text\\)\\(\\s-+\\|$\\)" 1 font-lock-type-face)
 			 (( "component" "types" "external" "->" "plural" "numerical"
@@ -555,7 +577,7 @@ Return nil if the script can not be found."
 
 ;;;###autoload (autoload 'alan-grammar-mode "alan-mode")
 (alan-define-mode alan-grammar-mode
-	"Major mode for editing M-industries grammar files."
+	"Major mode for editing Alan grammar files."
   :language "dependencies/dev/internals/alan/language"
   :pairs (("[" . "]"))
   :keywords ((("rules" "root" "component" "indent" "keywords" "collection" "order"
@@ -578,7 +600,7 @@ Return nil if the script can not be found."
 
 ;;;###autoload (autoload 'alan-template-mode "alan-mode")
 (alan-define-mode alan-template-mode
-	"Major mode for editing M-industries template files."
+	"Major mode for editing Alan template files."
   :file-pattern "\\.template$"
   :language "dependencies/dev/internals/alan-to-text-transformation/language")
 
@@ -597,14 +619,11 @@ Return nil if the script can not be found."
 
 ;;;###autoload (autoload 'alan-application-mode "alan-mode")
 (alan-define-mode alan-application-mode
-	"Major mode for editing M-industries application model files."
+	"Major mode for editing Alan application model files."
   :pairs (("{" . "}"))
   :keywords (
+			 ("^\\(users\\|roles\\|root\\|numerical-types\\)" . font-lock-keyword-face)
 			 ("\\(:\\|:=\\)\\s-+\\(stategroup\\|component\\|group\\|file\\|collection\\|command\\|reference-set\\|natural\\|integer\\|text\\)\\(\\s-+\\|$\\)" 2 font-lock-type-face)
-			 (("add" "branch" "ceil" "convert" "count" "division" "floor" "increment"
-			   "max" "min" "remainder" "subtract" "sum" "sumlist" "base" "diff"
-			   "product")
-			  . font-lock-function-name-face)
 			 (("today" "now" "zero" "true" "false") . font-lock-constant-face)
 			 (( "@date" "@date-time" "@default:" "@description:" "@desired"
 			   "@dormant" "@duration:" "@factor:" "@guid" "@hidden"
@@ -612,6 +631,10 @@ Return nil if the script can not be found."
 			   "@metadata" "@min:" "@multi-line" "@name" "@namespace" "@small"
 			   "@sticky" "@validate:" "@verified" "@visible" )
 			   . font-lock-keyword-face)
+			 (("add" "branch" "ceil" "convert" "count" "division" "floor" "increment"
+			   "max" "min" "remainder" "subtract" "sum" "sumlist" "base" "diff"
+			   "product")
+			  . font-lock-function-name-face)
 			 (("#" "#reader" "#writer" "$" "$^" "%" "%^" "%}" "&#" "&" "*" "+" "+^" ","
 			   "-" "-<" "->" "." ".^" ".key" ".self" ".}" "/" "10^" ":" ":=" "<" "<-"
 			   "<=" "=" "==" "=>" ">" ">=" ">key" "?" "?^" "@%^" "@" "@?^" "@date"
@@ -636,7 +659,7 @@ Return nil if the script can not be found."
 
 ;;;###autoload (autoload 'alan-widget-mode "alan-mode")
 (alan-define-mode alan-widget-mode
-	"Major mode for editing M-industries widget model files."
+	"Major mode for editing Alan widget model files."
   :file-pattern "widgets/.*\\.ui\\.alan$"
   :pairs (("{" . "}") ("[" . "]"))
   :keywords ((( "#" "$" "*" "," "->" "."  ".}"  ":" "::" "=>" ">" ">>" "?"  "@"
@@ -649,7 +672,7 @@ Return nil if the script can not be found."
 
 ;;;###autoload (autoload 'alan-views-mode "alan-mode")
 (alan-define-mode alan-views-mode
-	"Major mode for editing M-industries views files."
+	"Major mode for editing Alan views files."
   :pairs (("{" . "}") ("[" . "]"))
   :file-pattern "views/.*\\.ui\\.alan$"
   :propertize-rules (("/?%\\(}\\)" (1 "_")))
