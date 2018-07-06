@@ -465,7 +465,7 @@ Return nil if the script can not be found."
 				 (let ((alan-script-candidate (concat name "alan")))
 				   (and (file-executable-p alan-script-candidate)
 						(not (file-directory-p alan-script-candidate))))))))
-	(concat alan-project-script "alan")))
+	(expand-file-name (concat alan-project-script "alan"))))
 
 (defun alan--file-exists (name)
   "Return the file NAME if it exists."
