@@ -148,7 +148,7 @@ Optional argument DOCSTRING for the major mode."
 		 (language-name ;; name based on language naming convention.
 		  (s-chop-suffix "-mode" (s-chop-prefix "alan-" (symbol-name name))))
 		 (file-pattern ;; the naming convention for the file pattern is to use underscores.
-		  (concat (s-replace "-" "_" language-name) ".alan"))
+		  (concat (s-replace "-" "_" language-name) "\\.alan\\'"))
 		 (keywords)
 		 (language)
 		 (pairs '())
@@ -602,7 +602,7 @@ Return nil if the script can not be found."
 ;;;###autoload (autoload 'alan-template-mode "alan-mode")
 (alan-define-mode alan-template-mode
 	"Major mode for editing Alan template files."
-  :file-pattern "\\.template$"
+  :file-pattern "\\.template\\'"
   :language "dependencies/dev/internals/alan-to-text-transformation/language")
 
 (defun alan-list-nummerical-types ()
@@ -661,7 +661,7 @@ Return nil if the script can not be found."
 ;;;###autoload (autoload 'alan-widget-mode "alan-mode")
 (alan-define-mode alan-widget-mode
 	"Major mode for editing Alan widget model files."
-  :file-pattern "widgets/.*\\.ui\\.alan$"
+  :file-pattern "widgets/.*\\.ui\\.alan\\'"
   :pairs (("{" . "}") ("[" . "]"))
   :keywords ((( "#" "$" "*" "," "->" "."  ".}"  ":" "::" "=>" ">" ">>" "?"  "@"
 				"^" "binding" "configuration" "control" "current" "dictionary"
@@ -675,7 +675,7 @@ Return nil if the script can not be found."
 (alan-define-mode alan-views-mode
 	"Major mode for editing Alan views files."
   :pairs (("{" . "}") ("[" . "]"))
-  :file-pattern "views/.*\\.ui\\.alan$"
+  :file-pattern "views/.*\\.ui\\.alan\\'"
   :propertize-rules (("/?%\\(}\\)" (1 "_")))
   :keywords ((( "$" "%" "%^" "%}" "*" "+" "+^" "-" "->" "."  ".>" ".^" "/%}" "/>"
 				":>" "<" "<<" "<=" "=" "==" ">" ">=" ">>" "?"  "?^" "@" "as"
