@@ -233,19 +233,26 @@ Optional argument DOCSTRING for the major mode."
   (xref-make (format alan--xref-format symbol type (line-number-at-pos symbol-position))
 			 (xref-make-buffer-location buffer symbol-position)))
 
+(defun alan--projectile-project-root ()
+  "Finds the project root of a buffer if projectile is available.
+Return default-directory if the buffer is not in a project or
+projectile is not available."
+  (if (featurep 'projectile)
+	(let ((projectile-require-project-root nil))
+	  (projectile-project-root))
+	default-directory))
+
 (defun alan--xref-find-definitions (symbol)
   "Find all definitions matching SYMBOL."
   (let ((xrefs)
 		(project-scope-limit (and
-							  (featurep 'projectile)
 							  alan-xref-limit-to-project-scope
-							  (projectile-project-root))))
+							  (alan--projectile-project-root))))
 	(dolist (buffer (buffer-list))
 	  (with-current-buffer buffer
 		(when (and (derived-mode-p 'alan-mode)
 				   (or (null project-scope-limit)
-					   (and (featurep 'projectile)
-							(string= project-scope-limit (projectile-project-root)))))
+					   (string= project-scope-limit (alan--projectile-project-root))))
 		  (save-excursion
 			(save-restriction
 			  (widen)
