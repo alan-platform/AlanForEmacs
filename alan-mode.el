@@ -487,7 +487,7 @@ Return nil if the script can not be found."
 		   (concat alan-project-compiler " " alan-project-language " --format emacs --log warning /dev/null ")))
 	 ((and  alan-project-script)
 	  (setq flycheck-alan-executable alan-project-script)
-	  (set (make-local-variable 'compile-command) (concat alan-project-script " build emacs ")))
+	  (set (make-local-variable 'compile-command) (concat alan-project-script " build --format emacs ")))
 	 (t (message "No alan compiler or script found.")))))
 
 ;;; Modes
