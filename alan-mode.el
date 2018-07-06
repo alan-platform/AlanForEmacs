@@ -43,10 +43,11 @@
 (require 'timer)
 (require 'xref)
 (require 's)
+(require 'seq)
 
 ;;; Code:
 
-(add-to-list 'auto-mode-alist '("\\.alan$" . alan-mode))
+(add-to-list 'auto-mode-alist '("\\.alan\\'" . alan-mode))
 
 (defgroup alan nil
   "Alan mode."
