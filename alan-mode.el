@@ -94,8 +94,8 @@ Setting this will try to use the `alan-compiler' instead of the `alan-script'."
 	(modify-syntax-entry ?/ ". 124" alan-mode-syntax-table)
 	(modify-syntax-entry ?\n ">" alan-mode-syntax-table)
 	(modify-syntax-entry ?' "\"" alan-mode-syntax-table)
-	(modify-syntax-entry ?{ "(}" alan-mode-syntax-table)
-	(modify-syntax-entry ?} "){" alan-mode-syntax-table)
+	(modify-syntax-entry ?{ "_" alan-mode-syntax-table)
+	(modify-syntax-entry ?} "_" alan-mode-syntax-table)
 	alan-mode-syntax-table)
   "Syntax table for ‘alan-mode’.")
 
