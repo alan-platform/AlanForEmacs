@@ -9,7 +9,10 @@ A major mode for editing Alan files. It provides:
 
 ## Installation
 
-Put alan-mode.el in your load-path.
+- Put alan-mode.el in your load-path.
+- Install it from [![MELPA](https://melpa.org/packages/alan-mode-badge.svg)](https://melpa.org/#/alan-mode) using package-install  <kbd>M-x package-install [ret] alan-mode</kbd>
+
+## Configuration
 
 To setup up FlyCheck integration add the following snippet to your init.
 
