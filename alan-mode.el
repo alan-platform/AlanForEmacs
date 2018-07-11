@@ -75,7 +75,9 @@ resolved to an existing directory."
 
 (defcustom alan-language-definition nil
   "The Alan language to use.
-Setting this will try to use the `alan-compiler' instead of the `alan-script'."
+Setting this will try to use the `alan-compiler' instead of the
+`alan-script'. If the path is relative it will try to resolve it
+against the `alan-project-root'."
   :group 'alan
   :safe 'stringp)
 (make-variable-buffer-local 'alan-language-definition)
@@ -131,7 +133,8 @@ BODY can define keyword aguments.
 	A list of cons cells where the first is a regexp or a list of keywords
 	and the second element is the font-face.
 :language
-	The path to the Alan language definition.
+	The path to the Alan language definition. Its value is set in
+	`alan-language-definition'.
 :pairs
 	A list of cons cells that match open and close parameters.
 :propertize-rules
@@ -144,6 +147,11 @@ Optional argument DOCSTRING for the major mode."
   (declare
    (doc-string 2)
    (indent 2))
+
+  (when (and docstring (not (stringp docstring))) ;; From `define-derived-mode'.
+    (push docstring body)
+    (setq docstring nil))
+
   (let* ((mode-name (intern (concat "alan-" (symbol-name name) "-mode")))
 		 (language-name ;; name based on language naming convention.
 		  (s-chop-suffix "-mode" (s-chop-prefix "alan-" (symbol-name name))))
@@ -492,7 +500,7 @@ Return nil if the script can not be found."
 	  (setq alan--flycheck-language-definition alan-project-language)
 	  (set (make-local-variable 'compile-command)
 		   (concat alan-project-compiler " " alan-project-language " --format emacs --log warning /dev/null ")))
-	 ((and  alan-project-script)
+	 (alan-project-script
 	  (setq flycheck-alan-executable alan-project-script)
 	  (set (make-local-variable 'compile-command) (concat alan-project-script " build --format emacs ")))
 	 (t (message "No alan compiler or script found.")))))
