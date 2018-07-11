@@ -98,6 +98,8 @@ against the `alan-project-root'."
 	(modify-syntax-entry ?' "\"" alan-mode-syntax-table)
 	(modify-syntax-entry ?{ "_" alan-mode-syntax-table)
 	(modify-syntax-entry ?} "_" alan-mode-syntax-table)
+	(modify-syntax-entry ?\] "_" alan-mode-syntax-table)
+	(modify-syntax-entry ?\[ "_" alan-mode-syntax-table)
 	alan-mode-syntax-table)
   "Syntax table for ‘alan-mode’.")
 
@@ -110,8 +112,6 @@ against the `alan-project-root'."
   (setq comment-end "")
   (setq block-comment-start "/*")
   (setq block-comment-end "*/")
-  (modify-syntax-entry ?\] "_" alan-mode-syntax-table)
-  (modify-syntax-entry ?\[ "_" alan-mode-syntax-table)
   (setq font-lock-defaults alan-mode-font-lock-keywords)
   (add-hook 'xref-backend-functions #'alan--xref-backend nil t)
   (set (make-local-variable 'indent-line-function) 'alan-mode-indent-line)
