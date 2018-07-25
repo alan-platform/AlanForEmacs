@@ -546,8 +546,7 @@ Return nil if the script can not be found."
 			(root-point (re-search-forward "^root$"))
 			(root-point-start (match-beginning 0)) ;; because the last search was for root
 			(alan-keywords (list)))
-		(while (re-search-forward "\\[\\(\\s-?'[^'
-]+'\\s-?,?\\)+\\]" nil t) ;; there is a line end in the regex. Hence the weird break.
+		(while (re-search-forward "\\[\\(\\s-?'[^'\n]+'\\s-?,?\\)+\\]" nil t)
 		  (let ((keyword-group (match-string 0))
 				(search-start 0))
 			(while (string-match "'[^']+'" keyword-group search-start)
@@ -555,12 +554,8 @@ Return nil if the script can not be found."
 			  (setq search-start (match-end 0)))))
 		(delete-region (+ 1 keyword-point) root-point-start)
 		(goto-char (+ 1 keyword-point))
-		(insert (string-join (mapcar (lambda (k) (concat "\t" k)) (sort (delete-dups alan-keywords ) 'string<)) "
-"))
-		(insert "
-")
-		(insert "
-")))))
+		(insert (string-join (mapcar (lambda (k) (concat "\t" k)) (sort (delete-dups alan-keywords ) 'string<)) "\n"))
+		(insert "\n\n")))))
 
 (defun alan-grammar-mode-indent-line ()
   "Indentation based on parens and toggle indentation to min and max indentation possible."
