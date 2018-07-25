@@ -82,6 +82,15 @@ against the `alan-project-root'."
   :safe 'stringp)
 (make-variable-buffer-local 'alan-language-definition)
 
+(defconst alan-add-line-in-braces-rule
+  (lambda (when (and (derived-mode-p 'alan-mode)
+					 (looking-back "\\s(\\s-*\n\\s-*") (looking-at-p "\\s)"))
+			'after-stay))
+  "A rule that can be added to `electric-layout-rules'.
+
+It can be added locally by adding it to the alan-hook:
+(set (make-variable-buffer-local 'electric-layout-rules) '(alan-add-line-in-braces-rule))")
+
 ;;; Alan mode
 
 (defvar-local alan-mode-font-lock-keywords
