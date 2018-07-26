@@ -39,7 +39,7 @@ In most cases this is more useful:
 Alan mode provides an electric layout rule (`alan-add-line-in-braces-rule`). Set it up in your init file, preferably in the `alan-mode-hook`.
 ```
 (electric-layout-mode 1)
-(set (make-variable-buffer-local 'electric-layout-rules) '(alan-add-line-in-braces-rule))
+(set (make-variable-buffer-local 'electric-layout-rules) (list alan-add-line-in-braces-rule))
 ```
 
 ![screenshot](/screenshot.png)

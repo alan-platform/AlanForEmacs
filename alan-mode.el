@@ -83,13 +83,13 @@ against the `alan-project-root'."
 (make-variable-buffer-local 'alan-language-definition)
 
 (defconst alan-add-line-in-braces-rule
-  (lambda (when (and (derived-mode-p 'alan-mode)
+  '(?\n . (lambda () (when (and (derived-mode-p 'alan-mode)
 					 (looking-back "\\s(\\s-*\n\\s-*") (looking-at-p "\\s)"))
-			'after-stay))
+			'after-stay)))
   "A rule that can be added to `electric-layout-rules'.
 
 It can be added locally by adding it to the alan-hook:
-(set (make-variable-buffer-local 'electric-layout-rules) '(alan-add-line-in-braces-rule))")
+(set (make-variable-buffer-local 'electric-layout-rules) (list alan-add-line-in-braces-rule))")
 
 ;;; Alan mode
 
