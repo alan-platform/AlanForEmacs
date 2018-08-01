@@ -738,6 +738,19 @@ Return nil if the script can not be found."
 			   "roles" "root" "stategroup" "switch" "text" "with")
 			  . font-lock-builtin-face)))
 
+;;;###autoload (autoload 'alan-migration-mode "alan-mode")
+(alan-define-mode alan-migration-mode
+	:keywords ((":\\s-+\\(stategroup\\|group\\|collection\\|number\\|text\\|file\\)" 1 font-lock-type-face)
+			   (("-" "->" "," ":" ":(" "?"  "?^" "?^(" "."  ".(" ".^" ".^("
+				".key" "(" ")" "{" "}" "@" "*" "/" "&&" "#" "%" "%(" "%^" "%^("
+				"+" "+(" "+^" "+^(" "<!"  "<" "=" "==" "=>" ">" ">(" ">key"
+				">key(" "|" "as" "collection" "conversion" "convert" "enrich"
+				"entry" "extension" "failure" "false" "file" "find" "group" "in"
+				"instance" "mapping" "match" "natural" "number" "numerical"
+				"panic" "regexp" "root" "shared" "stategroup" "success" "sum"
+				"switch" "text" "to-number" "to-text" "to" "token" "true" "type"
+				) . font-lock-builtin-face)))
+
 (provide 'alan-mode)
 
 ;;; alan-mode.el ends here
