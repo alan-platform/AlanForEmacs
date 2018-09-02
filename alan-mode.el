@@ -68,6 +68,13 @@ resolved to an existing directory."
   :group 'alan
   :type '(string))
 
+(defcustom alan-compiler-project-root "."
+  "The relative path from the current buffer file to the compilation root of the `alan-compiler'.
+This is sets the -C option."
+  :type '(string)
+  :safe 'stringp)
+(make-variable-buffer-local 'alan-compiler-project-root)
+
 (defcustom alan-script "alan"
   "The alan build script file."
   :group 'alan
@@ -441,7 +448,7 @@ Do not include /dev/null and only show errors for the current buffer."
   :command ("alan"
 			(eval (if (null alan--flycheck-language-definition)
 					  '("build" "--format" "emacs")
-					`(,alan--flycheck-language-definition "--format" "emacs" "--log" "warning" "/dev/null"))))
+					`(,alan--flycheck-language-definition "--format" "emacs" "--log" "warning" "-C" ,alan-compiler-project-root "/dev/null"))))
   :error-patterns
   ((error line-start (file-name) ":" line ":" column ": error:" (zero-or-one " " (one-or-more digit) ":" (one-or-more digit))
 		  ;; Messages start with a white space after the error.
@@ -513,7 +520,7 @@ Return nil if the script can not be found."
 	  (set (make-local-variable 'flycheck-alan-executable) alan-project-compiler)
 	  (setq alan--flycheck-language-definition alan-project-language)
 	  (set (make-local-variable 'compile-command)
-		   (concat alan-project-compiler " " alan-project-language " --format emacs --log warning /dev/null ")))
+		   (concat alan-project-compiler " " alan-project-language " --format emacs --log warning -C " alan-compiler-project-root " /dev/null ")))
 	 (alan-project-script
 	  (setq flycheck-alan-executable alan-project-script)
 	  (set (make-local-variable 'compile-command) (concat alan-project-script " build --format emacs ")))
@@ -685,7 +692,7 @@ Return nil if the script can not be found."
 ;;;###autoload (autoload 'alan-widget-mode "alan-mode")
 (alan-define-mode alan-widget-mode
 	"Major mode for editing Alan widget model files."
-  :file-pattern "widgets/.*\\.ui\\.alan\\'"
+  :file-pattern "widgets/.*\\.alan\\'"
   :pairs (("{" . "}") ("[" . "]"))
   :keywords ((( "#" "$" "*" "," "->" "."  ".}"  ":" "::" "=>" ">" ">>" "?"  "@"
 				"^" "binding" "configuration" "control" "current" "dictionary"
@@ -699,7 +706,7 @@ Return nil if the script can not be found."
 (alan-define-mode alan-views-mode
 	"Major mode for editing Alan views files."
   :pairs (("{" . "}") ("[" . "]"))
-  :file-pattern "views/.*\\.ui\\.alan\\'"
+  :file-pattern "views/.*\\.alan\\'"
   :propertize-rules (("/?%\\(}\\)" (1 "_")))
   :keywords ((( "$" "%" "%^" "%}" "*" "+" "+^" "-" "->" "."  ".>" ".^" "/%}" "/>"
 				":>" "<" "<<" "<=" "=" "==" ">" ">=" ">>" "?"  "?^" "@" "as"
