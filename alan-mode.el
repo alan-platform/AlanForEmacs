@@ -643,6 +643,7 @@ Return nil if the script can not be found."
 ;;;###autoload (autoload 'alan-template-mode "alan-mode")
 (alan-define-mode alan-template-mode
 	"Major mode for editing Alan template files."
+  :pairs (("[" . "]") ("(" . ")"))
   :file-pattern "\\.template\\'"
   :language "dependencies/dev/internals/alan-to-text-transformation/language")
 
