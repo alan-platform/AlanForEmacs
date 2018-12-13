@@ -636,7 +636,7 @@ Return nil if the script can not be found."
   (let ((string-to-yank (current-kill 0 t)))
 	(insert (mapconcat 'identity
 					   (mapcar (lambda (s)
-								 (format "\"%s\"" (replace-regexp-in-string "\"" "\\\\\"" s)))
+								 (format "\"%s\" ;" (replace-regexp-in-string "\"" "\\\\\"" s)))
 							   (split-string string-to-yank "\n"))
 					   "\n"))))
 
