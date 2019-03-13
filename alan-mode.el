@@ -86,6 +86,7 @@ Setting this will try to use the `alan-compiler' instead of the
 `alan-script'. If the path is relative it will try to resolve it
 against the `alan-project-root'."
   :group 'alan
+  :type '(string)
   :safe 'stringp)
 (make-variable-buffer-local 'alan-language-definition)
 
