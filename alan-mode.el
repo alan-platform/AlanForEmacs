@@ -89,6 +89,14 @@ against the `alan-project-root'."
   :safe 'stringp)
 (make-variable-buffer-local 'alan-language-definition)
 
+(defcustom alan-on-phrase-added-hook nil
+  "A hook that is run after successfully adding a phrase to
+phrases.alan.
+
+Used by `alan-views-add-to-phrases'."
+  :type 'hook
+  :group 'alan)
+
 (defconst alan-add-line-in-braces-rule
   '(?\n . (lambda () (when (and (derived-mode-p 'alan-mode)
 					 (looking-back "\\s(\\s-*\n\\s-*") (looking-at-p "\\s)"))
@@ -730,6 +738,45 @@ Return nil if the script can not be found."
 				"query" "reference" "refresh" "role" "root" "selected"
 				"stategroup" "subscribe" "text" "using" "view" "window")
 			  . font-lock-builtin-face)))
+
+;;;###autoload (autoload 'alan-add-to-phrases "alan-mode")
+(defun alan-add-to-phrases()
+  "Adds the identifier at point to the phrases file.
+
+Runs the hook `alan-on-phrase-added-hook' on success. You can use
+this to refresh the buffer for example `flycheck-buffer'."
+  (interactive)
+  (when-let ((identifier (or (thing-at-point 'identifier)
+							 (save-excursion
+							   ;; errors are reported starting at the quote of
+							   ;; an identifier.  but thing at point starts
+							   ;; after the quote. So try to see if the
+							   ;; identifier is after the quote.
+							   (when (looking-at "'")
+								 (forward-char)
+								 (thing-at-point 'identifier)))))
+			   (phrases-directory (locate-dominating-file default-directory "phrases.alan"))
+			   (phrases-buffer (find-file-noselect (concat phrases-directory "phrases.alan"))))
+	(when
+		(with-current-buffer phrases-buffer
+		  (goto-char (point-min))
+		  (unless (search-forward identifier nil t)
+			(goto-char (point-max))
+			(unless (looking-back (regexp-quote identifier) nil)
+			  (insert identifier)
+			  (save-buffer)
+			  (bury-buffer)
+			  (mapc
+			   (lambda (translation-buffer-name)
+				 (let ((translation-buffer (find-file-noselect (concat phrases-directory "/translations/" translation-buffer-name))))
+				   (with-current-buffer translation-buffer
+					 (goto-char (point-max))
+					 (insert identifier ": " (s-replace "'" "\"" identifier))
+					 (save-buffer)
+					 (bury-buffer translation-buffer))))
+			   (directory-files (concat phrases-directory "/translations/") nil "\.alan$" t))
+			  t)))
+	  (run-hooks 'alan-on-phrase-added-hook))))
 
 ;;;###autoload (autoload 'alan-wiring-mode "alan-mode")
 (alan-define-mode alan-wiring-mode
