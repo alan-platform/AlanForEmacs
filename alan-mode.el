@@ -1,19 +1,19 @@
-;;; alan-mode.el --- Major mode for editing M-industries Alan files
+;;; alan-mode.el --- Major mode for editing Alan files
 
-;; Copyright (C) 2018 M-industries
+;; Copyright (C) 2019 Kjerner
 
-;; Author: Paul van Dam <pvandam@m-industries.com>
-;; Maintainer: Paul van Dam <pvandam@m-industries.com>
+;; Author: Paul van Dam <pvandam@kjerner.com>
+;; Maintainer: Paul van Dam <pvandam@kjerner.com>
 ;; Version: 1.0.0
 ;; Created: 13 October 2017
-;; URL: https://github.com/M-industries/AlanForEmacs
+;; URL: https://github.com/Kjerner/AlanForEmacs
 ;; Homepage: https://alan-platform.com/
 ;; Keywords: alan, languages
 ;; Package-Requires: ((flycheck "32") (emacs "25.1") (s "1.12"))
 
 ;; MIT License
 
-;; Copyright (c) 2017 M-industries
+;; Copyright (c) 2019 Kjerner
 
 ;; Permission is hereby granted, free of charge, to any person obtaining a copy
 ;; of this software and associated documentation files (the "Software"), to deal
@@ -705,7 +705,7 @@ Return nil if the script can not be found."
 
 ;;;###autoload (autoload 'alan-widget-mode "alan-mode")
 (alan-define-mode alan-widget-mode
-	"Major mode for editing Alan widget model files."
+	"Major mode for editing Alan widget files."
   :file-pattern "widgets/.*\\.alan\\'"
   :pairs (("{" . "}") ("[" . "]"))
   :keywords ((( "#" "$" "*" "," "->" "."  ".}"  ":" "::" "=>" ">" ">>" "?"  "@"
