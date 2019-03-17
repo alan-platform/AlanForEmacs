@@ -140,7 +140,8 @@ It can be added locally by adding it to the alan-hook:
   (setq font-lock-defaults alan-mode-font-lock-keywords)
   (add-hook 'xref-backend-functions #'alan--xref-backend nil t)
   (set (make-local-variable 'indent-line-function) 'alan-mode-indent-line)
-  (add-hook 'post-command-hook #'alan-update-header nil t)
+  (add-hook 'post-command-hook (alan-throttle 0.5 #'alan-update-header)  nil t)
+  (add-hook 'xref-after-jump-hook #'alan-update-header nil t)
   (setq header-line-format ""))
 
 (defvar alan-parent-regexp "\\s-*\\('\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'\\)")
@@ -443,19 +444,27 @@ STATE is the result of the function `parse-partial-sexp'."
 		  font-lock-string-face))
     font-lock-comment-face))
 
-(defvar-local alan--update-headline-timer nil)
 (defun alan-update-header ()
-  "Update the header line after 0.5 seconds of idle time."
-  (when (timerp alan--update-headline-timer)
-	(cancel-timer alan--update-headline-timer))
-  (setq alan--update-headline-timer
-		(run-with-idle-timer
-		 0.5 nil
-		 (lambda (buffer-to-update)
+  "Sets the `header-line-format' to `alan-path'."
+  (setq header-line-format (format " %s  " (alan-path)))
+  (force-mode-line-update))
+
+(defun alan-throttle (secs function)
+  "Returns the FUNCTION throttled in SECS."
+  (lexical-let ((executing nil)
+				(buffer-to-update (current-buffer))
+				(local-secs secs)
+				(local-function function))
+	(lambda ()
+	  (unless executing
+		(setq executing t)
+		(funcall local-function)
+		(run-with-timer
+		 local-secs nil
+		 (lambda ()
 		   (with-current-buffer buffer-to-update
-			 (setq header-line-format (format " %s  " (alan-path)))
-			 (force-mode-line-update)))
-		 (current-buffer))))
+			 (funcall local-function)
+			 (setq executing nil))))))))
 
 ;;; Flycheck
 
