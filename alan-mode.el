@@ -281,13 +281,16 @@ word. E.g. '-> stategroup'."
 (defun alan--xref-backend () 'alan)
 
 (defvar alan--xref-format
-  (let ((str "%s %s :%d"))
+  (let ((str "%s%s :%d%s"))
     (put-text-property 0 2 'face 'font-lock-variable-name-face str)
     (put-text-property 3 5 'face 'font-lock-function-name-face str)
     str))
 
-(defun alan--xref-make-xref (symbol type buffer symbol-position)
-  (xref-make (format alan--xref-format symbol type (line-number-at-pos symbol-position))
+(defun alan--xref-make-xref (symbol type buffer symbol-position path)
+  (xref-make (format alan--xref-format symbol
+					 (or (s-blank? type) (s-prepend " " type))
+					 (line-number-at-pos symbol-position)
+					 (or (s-blank? path) (s-prepend " " path)))
 			 (xref-make-buffer-location buffer symbol-position)))
 
 (defun alan--projectile-project-root ()
@@ -316,7 +319,7 @@ projectile is not available."
 			  (goto-char (point-min))
 			  (while (re-search-forward "^\\s-*\\('\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'\\)" nil t)
 				(when (string= (match-string 1) symbol)
-				  (add-to-list 'xrefs (alan--xref-make-xref symbol (alan-guess-type) buffer (match-beginning 1)) t))))))))
+				  (add-to-list 'xrefs (alan--xref-make-xref symbol (alan-guess-type) buffer (match-beginning 1) (alan-path)) t))))))))
 	xrefs))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql alan)))
