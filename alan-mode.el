@@ -244,6 +244,16 @@ Optional argument DOCSTRING for the major mode."
 
 ;;; Xref backend
 
+(defun alan-guess-type ()
+  "Return the type assuming point is at the end of an identifier.
+Types usually have the form of : or -> followed by a single
+word. E.g. '-> stategroup'."
+  (progn (save-mark-and-excursion
+		   (save-match-data
+			 (if (looking-at "\\s-?\\(?:->\\|:\\)\\s-?\\(\\w+\\)")
+				 (match-string 1)
+			   "")))))
+
 (defun alan-boundry-of-identifier-at-point ()
   "Return the beginning and end of an alan identifier or nil if point is not on an identifier."
   (let ((text-properties (nth 1 (text-properties-at (point)))))
@@ -305,7 +315,7 @@ projectile is not available."
 			  (goto-char (point-min))
 			  (while (re-search-forward "^\\s-*\\('\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'\\)" nil t)
 				(when (string= (match-string 1) symbol)
-				  (add-to-list 'xrefs (alan--xref-make-xref symbol "" buffer (match-beginning 1)) t))))))))
+				  (add-to-list 'xrefs (alan--xref-make-xref symbol (alan-guess-type) buffer (match-beginning 1)) t))))))))
 	xrefs))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql alan)))
