@@ -675,7 +675,8 @@ Return nil if the script can not be found."
 (alan-define-mode alan-template-mode
 	"Major mode for editing Alan template files."
   :pairs (("[" . "]") ("(" . ")"))
-  :file-pattern "\\.template\\'"
+  :file-pattern "templates/\\.alan\\'"
+  :build-dir "../../../"
   :language "dependencies/dev/internals/alan-to-text-transformation/language")
 
 (defun alan-list-nummerical-types ()
@@ -841,6 +842,13 @@ this to refresh the buffer for example `flycheck-buffer'."
 				"panic" "regexp" "root" "shared" "stategroup" "success" "sum"
 				"switch" "text" "to-number" "to-text" "to" "token" "true" "type"
 				) . font-lock-builtin-face)))
+
+;;;###autoload (autoload 'alan-settings-mode "alan-mode")
+(alan-define-mode alan-settings-mode
+	:pairs (("{" . "}") ("[" . "]")))
+
+(alan-define-mode alan-control-mode
+	:pairs (("{" . "}")))
 
 (provide 'alan-mode)
 
