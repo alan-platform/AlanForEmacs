@@ -675,7 +675,7 @@ Return nil if the script can not be found."
 (alan-define-mode alan-template-mode
 	"Major mode for editing Alan template files."
   :pairs (("[" . "]") ("(" . ")"))
-  :file-pattern "templates/\\.alan\\'"
+  :file-pattern "templates/.*\\.alan\\'"
   :build-dir "../../../"
   :language "dependencies/dev/internals/alan-to-text-transformation/language")
 
