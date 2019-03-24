@@ -282,15 +282,17 @@ word. E.g. '-> stategroup'."
 
 (defvar alan--xref-format
   (let ((str "%s%s :%d%s"))
-    (put-text-property 0 2 'face 'font-lock-variable-name-face str)
-    (put-text-property 3 5 'face 'font-lock-function-name-face str)
-    str))
+	;; Notice that %s counts as 1 character.
+    (put-text-property 0 1 'face 'font-lock-variable-name-face str)
+    (put-text-property 1 2 'face 'font-lock-function-name-face str)
+    str)
+  "The string format for an xref including font locking.")
 
 (defun alan--xref-make-xref (symbol type buffer symbol-position path)
   (xref-make (format alan--xref-format symbol
-					 (or (s-blank? type) (s-prepend " " type))
+					 (if (s-blank? type) "" (s-prepend " " (substring-no-properties type)))
 					 (line-number-at-pos symbol-position)
-					 (or (s-blank? path) (s-prepend " " path)))
+					 (if (s-blank? path) "" (s-prepend " " (substring-no-properties path))))
 			 (xref-make-buffer-location buffer symbol-position)))
 
 (defun alan--projectile-project-root ()
