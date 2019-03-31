@@ -701,43 +701,42 @@ Return nil if the script can not be found."
 	"Major mode for editing Alan application model files."
   :pairs (("{" . "}"))
   :keywords (
-			 ("^\\(users\\|roles\\|root\\|numerical-types\\)" . font-lock-keyword-face)
 			 ("\\(:\\|:=\\)\\s-+\\(stategroup\\|component\\|group\\|file\\|collection\\|command\\|reference-set\\|natural\\|integer\\|text\\)\\(\\s-+\\|$\\)" 2 font-lock-type-face)
 			 (("today" "now" "zero" "true" "false") . font-lock-constant-face)
-			 (( "@date" "@date-time" "@default:" "@description:" "@desired"
-			   "@dormant" "@duration:" "@factor:" "@guid" "@hidden"
-			   "@identifying" "@key-description:" "@label:" "@linked" "@max:"
-			   "@metadata" "@min:" "@multi-line" "@name" "@namespace" "@small"
-			   "@sticky" "@validate:" "@verified" "@visible" )
-			   . font-lock-keyword-face)
+			 (( "@ascending:" "@breakout" "@date-time" "@date" "@default:"
+			 "@dense-map" "@descending:" "@description:" "@desired" "@dormant"
+			 "@duration:" "@factor:" "@hidden" "@identifying" "@label:"
+			 "@linked-node-mapping" "@max:" "@metadata" "@min:" "@multi-line"
+			 "@name" "@namespace" "@ordered:" "@small" "@sticky" "@validate:"
+			 "@verified" "@visible" )
+			  . font-lock-keyword-face)
 			 (("add" "branch" "ceil" "convert" "count" "division" "floor" "increment"
 			   "max" "min" "remainder" "subtract" "sum" "sumlist" "base" "diff"
 			   "product")
 			  . font-lock-function-name-face)
-			 (("#" "can-create:" "can-delete:" "can-read:" "can-update:"
-			 "has-todo:" "$" "$^" "map" "%" "%^" "%}" "&#" "&" "(" ")" "*" "+"
-			 "+^" "," "-" "-<" "->" "." ".^" ".key" ".self" ".}" "/" "10^" ":"
-			 ":=" "<" "<-" "<=" "=" "==" "=>" ">" ">=" ">key" "?" "?^" "@" "@^"
-			 "@ascending:" "@breakout" "@date" "@date-time" "@default:"
-			 "@descending:" "@description:" "@desired" "@dormant" "@duration:"
-			 "@factor:" "@guid" "@hidden" "@identifying" "@key-description:"
+			 (( "-" "-<" "->" "," ":" ":=" "?" "?^" "." ".^" ".self" "(" ")" "["
+			 "]" "{" "}" "@" "@^" "@ascending:" "@breakout" "@date-time" "@date"
+			 "@default:" "@dense-map" "@descending:" "@description:" "@desired"
+			 "@dormant" "@duration:" "@factor:" "@hidden" "@identifying"
 			 "@label:" "@linked-node-mapping" "@max:" "@metadata" "@min:"
 			 "@multi-line" "@name" "@namespace" "@ordered:" "@small" "@sticky"
-			 "@validate:" "@verified" "@visible" "[" "]" "^" "acyclic-graph"
-			 "add" "and" "anonymous" "any" "as" "base" "ceil" "collection"
-			 "command" "component" "count" "create" "creation-time" "delete"
-			 "dense" "deprecated" "dictionary" "diff" "division" "do" "dynamic"
-			 "equal" "external" "false" "file" "floor" "forward" "from" "group"
-			 "hours" "ignore" "in" "increment" "integer" "interface"
-			 "interfaces" "inverse" "join" "life-time" "log" "match"
-			 "match-branch" "matrix" "max" "min" "minutes" "mutation-time"
-			 "natural" "now" "number" "numerical-types" "on" "one" "ontimeout"
-			 "or" "ordered-graph" "password" "product" "reference"
-			 "reference-set" "remainder" "root" "seconds" "space" "sparse"
-			 "stategroup" "std" "subtract" "sum" "sumlist" "switch" "text"
-			 "timer" "today" "true" "union" "unrestricted" "unsafe" "user"
-			 "users" "where" "with" "zero" "{" "|" "||" "}" "~>") . font-lock-builtin-face))
-  :propertize-rules (("[\\.%]\\(}\\)" (1 "_"))))
+			 "@validate:" "@verified" "@visible" "*" "/" "&" "&#" "#" "^" "+"
+			 "+^" "<-" "<" "<=" "=" "==" "=>" ">" ">=" "|" "||" "~>" "$" "$^"
+			 "10^" "acyclic-graph" "add" "and" "anonymous" "any" "as" "base"
+			 "can-create:" "can-delete:" "can-read:" "can-update:" "ceil"
+			 "collection" "command" "component" "count" "create" "creation-time"
+			 "delete" "deprecated" "diff" "division" "do" "dynamic" "equal"
+			 "external" "false" "file" "flatten" "floor" "forward" "from"
+			 "group" "guid" "has-todo:" "hours" "ignore" "in" "increment"
+			 "integer" "interface" "interfaces" "inverse" "join" "life-time"
+			 "log" "map" "match-branch" "match" "max" "min" "minutes"
+			 "mutation-time" "natural" "now" "number" "numerical-types" "on"
+			 "one" "ontimeout" "or" "ordered-graph" "password" "product"
+			 "reference-set" "remainder" "root" "seconds" "space" "stategroup"
+			 "std" "subtract" "sum" "sumlist" "switch" "text" "timer" "today"
+			 "true" "union" "unrestricted" "unsafe" "user" "users" "where"
+			 "with" "zero")
+			  . font-lock-builtin-face)))
 
 ;;;###autoload (autoload 'alan-widget-mode "alan-mode")
 (alan-define-mode alan-widget-mode
@@ -851,7 +850,13 @@ this to refresh the buffer for example `flycheck-buffer'."
 (alan-define-mode alan-settings-mode
 	:pairs (("{" . "}") ("[" . "]")))
 
+;;;###autoload (autoload 'alan-control-mode "alan-mode")
 (alan-define-mode alan-control-mode
+	:pairs (("{" . "}")))
+
+;;;###autoload (autoload 'alan-interface-mode "alan-mode")
+(alan-define-mode alan-interface-mode
+	:keywords ((":\\s-+\\(stategroup\\|group\\|collection\\|number\\|text\\|command\\|file\\)" 1 font-lock-type-face))
 	:pairs (("{" . "}")))
 
 (provide 'alan-mode)
