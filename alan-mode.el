@@ -396,8 +396,8 @@ E.g. 'views' . 'queries' . 'context' . 'candidates' . 'of'"
 	(save-excursion
 	  (while (setq has-parent (alan--has-parent))
 		(goto-char has-parent)
-		(add-to-list 'path-list (match-string 1) nil (lambda (a b) nil))))
-	(if (> (length path-list) 0)
+		(setq path-list (cons (match-string 1) path-list))))
+	(if path-list
 		(mapconcat 'identity path-list ".")
 	  "")))
 
