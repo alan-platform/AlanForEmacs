@@ -591,6 +591,7 @@ Return nil if the script can not be found."
 	"Major mode for editing Alan schema files."
   :language "dependencies/dev/internals/alan/language"
   :build-dir "../.."
+  :pairs (("{" . "}") ("(" . ")"))
   :keywords (("->\\s-+\\(stategroup\\|component\\|group\\|dictionary\\|command\\|densematrix\\|sparsematrix\\|reference\\|number\\|text\\)\\(\\s-+\\|$\\)" 1 font-lock-type-face)
 			 (( "component" "types" "external" "->" "plural" "numerical"
 				"integer" "natural" "root" "]" ":" "*" "?"  "~" "+" "constrain"
