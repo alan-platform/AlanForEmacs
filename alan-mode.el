@@ -610,7 +610,7 @@ Return nil if the script can not be found."
 	  (goto-char (point-min))
 
 	  (let ((keyword-point (re-search-forward "^keywords$"))
-			(root-point (re-search-forward "^root$"))
+			(root-point (re-search-forward "^root {$"))
 			(root-point-start (match-beginning 0)) ;; because the last search was for root
 			(alan-keywords (list)))
 		(while (re-search-forward "\\[\\(\\s-?'[^'\n]+'\\s-?,?\\)+\\]" nil t)
