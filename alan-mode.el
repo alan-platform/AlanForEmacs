@@ -905,6 +905,13 @@ this to refresh the buffer for example `flycheck-buffer'."
 	:keywords ((":\\s-+\\(stategroup\\|group\\|collection\\|number\\|text\\|command\\|file\\)" 1 font-lock-type-face))
 	:pairs (("{" . "}")))
 
+;;;###autoload (autoload 'alan-translations-mode "alan-mode")
+(alan-define-mode alan-translations-mode
+	:file-pattern "translations/.*\\.alan\\'")
+
+;;;###autoload (autoload 'alan-phrases-mode "alan-mode")
+(alan-define-mode alan-phrases-mode)
+
 (provide 'alan-mode)
 
 ;;; alan-mode.el ends here
