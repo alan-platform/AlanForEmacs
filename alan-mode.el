@@ -605,15 +605,29 @@ Return nil if the script can not be found."
   :language "dependencies/dev/internals/alan/language"
   :build-dir "../.."
   :pairs (("{" . "}") ("(" . ")"))
-  :keywords (("->\\s-+\\(stategroup\\|component\\|group\\|dictionary\\|command\\|densematrix\\|sparsematrix\\|reference\\|number\\|text\\)\\(\\s-+\\|$\\)" 1 font-lock-type-face)
-			 (( "component" "types" "external" "->" "plural" "numerical"
-				"integer" "natural" "root" "]" ":" "*" "?"  "~" "+" "constrain"
-				"acyclic" "ordered" "dictionary" "densematrix" "sparsematrix"
-				"$" "==" "!=" "group" "number" "reference" "stategroup" "text"
-				"."  "!"  "!&" "&" ".^" "+^" "}" ">" "*&" "?^" ">>" "forward"
-				"self" "{" "graph" "usage" "implicit" "ignore" "experimental"
-				"libraries" "using") . font-lock-builtin-face)))
+  :keywords ((":\\s-+\\(stategroup\\|component\\|group\\|dictionary\\|densematrix\\|sparsematrix\\|reference\\|integer\\|natural\\|text\\)\\(\\s-+\\|$\\)" 1 font-lock-type-face)
+			 (("deprecated") . font-lock-warning-face)
+			 (("apply" "identical-variant-switch" "key-switch" "narrowest"
+			    "narrows" "non-empty" "parity-switch" "product" "sign-switch"
+			    "struct-switch" "sum" "switch" "variant-switch" "widening"
+			    "widens" "widest"
+			   ) . font-lock-function-name-face)
+			 (("!"  "!root" "$" "$^" "&" "(" ")" "," "-" "->" "."  ".&" ":" "::"
+			   "=" "=>" ">" ">>" ">key" "?"  "?>" "@" "@usage" "@usage-ignore"
+			   "@usage-propagate" "@warn" "[" "[]" "]" "^" "acyclic-graph"
+			   "apply" "as" "combinator" "component" "component-types"
+			   "compound" "context" "defines" "deprecated" "dictionary" "even"
+			   "external" "group" "identical" "identical-variant-switch" "in"
+			   "inferred" "integer" "is" "key-switch" "libraries" "narrowest"
+			   "narrows" "negative" "non" "non-empty" "none" "odd" "on"
+			   "ordered-graph" "parametric" "parity-switch" "plural" "positive"
+			   "primitive" "product" "reference" "required" "root" "self" "set"
+			   "sibling" "sign-switch" "singular" "stategroup" "struct"
+			   "struct-switch" "sum" "switch" "text" "using" "variant"
+			   "variant-switch" "when" "where" "widening" "widens" "widest"
+			   "zero" "{" "|" "||" "}") . font-lock-builtin-face)))
 
+;; TODO do not take keywords that are in comments.
 (defun alan-grammar-update-keyword ()
   "Update the keywords section based on all used keywords in this grammar file."
   (interactive)
@@ -676,13 +690,21 @@ Return nil if the script can not be found."
 	"Major mode for editing Alan grammar files."
   :language "dependencies/dev/internals/alan/language"
   :build-dir "../.."
-  :pairs (("[" . "]"))
-  :keywords ((("rules" "root" "component" "indent" "keywords" "collection" "order"
-			   "predecessors" "successors" "group" "number" "reference" "stategroup"
-			   "has" "first" "last" "predecessor" "successor" "text" "[" "]" ","
+  :pairs (("[" . "]") ("{" . "}") ("(" . ")"))
+  :keywords (
+			 ("\\s-+\\(reference\\|stategroup\\|component\\|dictionary\\|group\\|integer\\|natural\\|text\\)\\(\\s-+\\|$\\)" 1 font-lock-type-face)
+			 (( "@block" "@break" "@break?"  "@list" "@list?"  "@order:" "@pad"
+			   "@raw" "@section" "@tabular" "@trim" "@trim-left" "@trim-none"
+			   "@trim-right" ) . font-lock-keyword-face)
+			 (("(" ")" "," "."  ":" "=" "@block" "@break" "@break?"  "@list"
+			   "@list?"  "@order:" "@pad" "@raw" "@section" "@tabular" "@trim" "@trim-left"
+			   "@trim-none" "@trim-right" "[" "]" "canonical" "component" "component-rules"
+			   "dictionary" "dynamic-order" "external" "first" "grammar" "group" "indent"
+			   "integer" "keywords" "last" "no" "node" "node-switch" "nodes" "none"
+			   "predecessor" "reference" "root" "set" "stategroup" "static" "successor" "text"
+			   "{" "|" "}"
 			   ) . font-lock-builtin-face))
-  (electric-indent-local-mode -1)
-  (local-set-key (kbd "RET") 'newline-and-indent)
+  (setq electric-indent-inhibit t)
   (set (make-local-variable 'indent-line-function) 'alan-grammar-mode-indent-line))
 
 (defun alan-template-yank ()
@@ -721,42 +743,46 @@ Return nil if the script can not be found."
 	"Major mode for editing Alan application model files."
   :pairs (("{" . "}"))
   :keywords (
-			 ("\\(:\\|:=\\)\\s-+\\(stategroup\\|component\\|group\\|file\\|collection\\|command\\|reference-set\\|natural\\|integer\\|text\\)\\(\\s-+\\|$\\)" 2 font-lock-type-face)
+			 ("\\(:\\|:=\\)\\s-+\\(stategroup\\|component\\|group\\|file\\|collection\\|command\\|reference-set\\|number\\|text\\)\\(\\s-+\\|$\\)" 2 font-lock-type-face)
 			 (("today" "now" "zero" "true" "false") . font-lock-constant-face)
-			 (( "@ascending:" "@breakout" "@date-time" "@date" "@default:"
-			 "@dense-map" "@descending:" "@description:" "@desired" "@dormant"
-			 "@duration:" "@factor:" "@hidden" "@identifying" "@label:"
+			 (("@ascending:" "@breakout" "@date" "@date-time" "@default:"
+			 "@descending:" "@description:" "@desired" "@dormant" "@duration:"
+			 "@factor:" "@hidden" "@icon:" "@identifying" "@label:"
 			 "@linked-node-mapping" "@max:" "@metadata" "@min:" "@multi-line"
-			 "@name" "@namespace" "@ordered:" "@small" "@sticky" "@validate:"
-			 "@verified" "@visible" )
-			  . font-lock-keyword-face)
-			 (("add" "branch" "ceil" "convert" "count" "division" "floor" "increment"
-			   "max" "min" "remainder" "subtract" "sum" "sumlist" "base" "diff"
-			   "product")
-			  . font-lock-function-name-face)
-			 (( "-" "-<" "->" "," ":" ":=" "?" "?^" "." ".^" ".self" "(" ")" "["
-			 "]" "{" "}" "@" "@^" "@ascending:" "@breakout" "@date-time" "@date"
-			 "@default:" "@dense-map" "@descending:" "@description:" "@desired"
-			 "@dormant" "@duration:" "@factor:" "@hidden" "@identifying"
-			 "@label:" "@linked-node-mapping" "@max:" "@metadata" "@min:"
-			 "@multi-line" "@name" "@namespace" "@ordered:" "@small" "@sticky"
-			 "@validate:" "@verified" "@visible" "*" "/" "&" "&#" "#" "^" "+"
-			 "+^" "<-" "<" "<=" "=" "==" "=>" ">" ">=" "|" "||" "~>" "$" "$^"
-			 "10^" "acyclic-graph" "add" "and" "anonymous" "any" "as" "base"
-			 "can-create:" "can-delete:" "can-read:" "can-update:" "ceil"
-			 "collection" "command" "component" "count" "create" "creation-time"
-			 "delete" "deprecated" "diff" "division" "do" "dynamic" "equal"
-			 "external" "false" "file" "flatten" "floor" "forward" "from"
-			 "group" "guid" "has-todo:" "hours" "ignore" "in" "increment"
-			 "integer" "interface" "interfaces" "inverse" "join" "life-time"
-			 "log" "map" "match-branch" "match" "max" "min" "minutes"
-			 "mutation-time" "natural" "now" "number" "numerical-types" "on"
-			 "one" "ontimeout" "or" "ordered-graph" "password" "product"
-			 "reference-set" "remainder" "root" "seconds" "space" "stategroup"
-			 "std" "subtract" "sum" "sumlist" "switch" "text" "timer" "today"
-			 "true" "union" "unrestricted" "unsafe" "user" "users" "where"
-			 "with" "zero")
-			  . font-lock-builtin-face)))
+			 "@name" "@ordered:" "@small" "@sticky" "@style:" "@validate:"
+			 "@verified" "@visible") . font-lock-keyword-face)
+			 (("abs" "add" "ceil" "compare" "concat" "count" "create" "delete"
+			 "diff" "division" "ensure" "execute" "flatten" "floor" "inverse"
+			 "join" "product" "remainder" "subtract" "sum" "switch" "update"
+			 "walk") . font-lock-function-name-face)
+			 (("$" "$^" "&" "(" ")" "*" "+" "," "-" "-<" "->" "." ".&" "/" ":"
+			   "<" "<=" "<>" "=" "==" "=>" ">" ">=" "?"  "@" "@^" "@ascending:"
+			   "@breakout" "@color" "@date" "@date-time" "@default:"
+			   "@descending:" "@description:" "@desired" "@dormant:"
+			   "@duration:" "@emphasis" "@hidden" "@icon:" "@identifying"
+			   "@label" "@max:" "@metadata" "@min:" "@multi-line" "@name:"
+			   "@numerical-type:" "@show:" "@small" "@style:" "@transition:"
+			   "@validate:" "@verified" "[" "[]" "]" "^" "abs" "accent" "action"
+			   "active:" "acyclic-graph" "add" "anonymous" "as" "auto-increment"
+			   "background" "bind" "branch" "brand" "can-create:" "can-delete:"
+			   "can-execute:" "can-read:" "can-update:" "ceil" "collection"
+			   "command" "compare" "component" "concat" "count" "create"
+			   "creation-time" "current" "decimals:" "delete" "diff" "division"
+			   "downstream" "dynamic:" "empty" "ensure" "error" "execute"
+			   "external" "external-authentication:" "file" "flatten" "floor"
+			   "foreground" "from" "group" "guid" "has-todo:" "hide" "hours"
+			   "identities:" "identity-initializer:" "ignore" "in" "interactive"
+			   "interface" "interfaces" "inverse" "is" "join" "key" "label:"
+			   "life-time" "link" "max" "min" "minutes" "mutation-time" "node"
+			   "nodes" "none" "now" "number" "numerical-types" "ontimeout"
+			   "ordered-graph" "pad" "parameter" "password-initializer:"
+			   "password-status:" "password:" "positive" "product"
+			   "reference-set" "remainder" "reset:" "resolvable" "root"
+			   "seconds" "self" "show" "sibling" "space" "stategroup" "std"
+			   "sticky" "subtract" "success" "sum" "switch" "text"
+			   "time-in-seconds" "timer" "to-color" "to-text" "today" "union"
+			   "update" "user" "user-initializer:" "users" "walk" "warning"
+			   "where" "with" "{" "|" "||" "}" "~>") . font-lock-builtin-face)))
 
 ;;;###autoload (autoload 'alan-widget-mode "alan-mode")
 (alan-define-mode alan-widget-mode
