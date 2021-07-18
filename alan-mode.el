@@ -44,6 +44,7 @@
 (require 'xref)
 (require 's)
 (require 'seq)
+(require 'cl)
 
 ;;; Code:
 
