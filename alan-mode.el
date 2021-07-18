@@ -651,40 +651,6 @@ Return nil if the script can not be found."
 		(insert (string-join (mapcar (lambda (k) (concat "\t" k)) (sort (delete-dups alan-keywords ) 'string<)) "\n"))
 		(insert "\n\n")))))
 
-(defun alan-grammar-mode-indent-line ()
-  "Indentation based on parens and toggle indentation to min and max indentation possible."
-  (interactive)
-  (let
-	  (new-indent)
- 	(save-mark-and-excursion
-	  (beginning-of-line)
-	  (when (bobp) (indent-line-to 0)) ;;at the beginning indent at 0
-	  (let* ((parent-position (nth 1 (syntax-ppss))) ;; take the current indentation of the enclosing expression
-			 (parent-indent (if parent-position
-								(save-excursion (goto-char parent-position) (current-indentation))
-							  0))
-			 (current-indent (current-indentation))
-			 (previous-line-indentation (and
-										 (not (bobp))
-										 (save-excursion
-										   (forward-line -1)
-										   (current-indentation))))
-			 (min-indentation (if parent-position (+ parent-indent tab-width) 0))
-			 (max-indentation (+ previous-line-indentation tab-width)))
-		(cond
-		 ((and parent-position (looking-at "\\s-*\\s)"))
-		  (setq new-indent parent-indent))
-		 ((= current-indent min-indentation)
-		  (setq new-indent max-indentation))
-		 ((< current-indent min-indentation) ;; usually after a newline.
-		  (setq new-indent (max previous-line-indentation min-indentation)))
-		 ((> current-indent max-indentation)
-		  (setq new-indent max-indentation))
-		 ((<= current-indent max-indentation)
-		  (setq new-indent (- current-indent tab-width))))))
- 	(when new-indent
- 	  (indent-line-to new-indent))))
-
 ;;;###autoload (autoload 'alan-grammar-mode "alan-mode")
 (alan-define-mode alan-grammar-mode
 	"Major mode for editing Alan grammar files."
@@ -703,9 +669,7 @@ Return nil if the script can not be found."
 			   "integer" "keywords" "last" "no" "node" "node-switch" "nodes" "none"
 			   "predecessor" "reference" "root" "set" "stategroup" "static" "successor" "text"
 			   "{" "|" "}"
-			   ) . font-lock-builtin-face))
-  (setq electric-indent-inhibit t)
-  (set (make-local-variable 'indent-line-function) 'alan-grammar-mode-indent-line))
+			   ) . font-lock-builtin-face)))
 
 (defun alan-template-yank ()
   "Yank but wrap as template."
