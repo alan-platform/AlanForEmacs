@@ -402,6 +402,19 @@ E.g. 'views' . 'queries' . 'context' . 'candidates' . 'of'"
 		(mapconcat 'identity path-list ".")
 	  "")))
 
+(defun alan--single-block (line)
+  "Check if a line is a single block.
+A single block is a line that starts with an open paren and end
+with a closing paren on the same line. LINE steps a number of
+lines forward or backward."
+  (save-excursion
+	(forward-line line)
+	(back-to-indentation)
+	(and (looking-at "\\s(")
+		 (eq (line-number-at-pos)
+			 (progn (forward-sexp) (line-number-at-pos)))
+		 (looking-back "\\s)$" 2))))
+
 (defun alan-mode-indent-line ()
   "Indentation based on parens.
 Not suitable for white space significant languages."
@@ -429,13 +442,12 @@ Not suitable for white space significant languages."
 		 (previous-line-indentation
 		  (setq new-indent previous-line-indentation)))
 		;; check for single block and add a level of indentation.
-		(save-excursion
-		  (back-to-indentation)
-		  (if (and (looking-at "\\s(")
-				   (eq (line-number-at-pos)
-					   (progn (forward-sexp) (line-number-at-pos))))
-			  (setq new-indent (min (if previous-line-indentation (+ previous-line-indentation tab-width) tab-width )
-									(+ new-indent tab-width)))))))
+		(when (alan--single-block 0)
+		  (if (alan--single-block -1)
+			  (setq new-indent previous-line-indentation)
+			(setq new-indent (min
+							  (if previous-line-indentation (+ previous-line-indentation tab-width) tab-width )
+							  (+ new-indent tab-width)))))))
 	(when new-indent
 	  (indent-line-to new-indent))))
 
