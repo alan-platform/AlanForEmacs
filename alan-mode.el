@@ -582,22 +582,29 @@ Return nil if the script can not be found."
 		(alan-project-compiler (cond ((alan-file-executable (concat (alan-project-root) "dependencies/dev/internals/alan/tools/compiler-project")))
 									 ((alan-file-executable (concat (alan-project-root) ".alan/devenv/platform/project-build-environment/tools/compiler-project")))))
 		(alan--pretty-printer (cond ((alan-file-executable (concat (alan-project-root) "dependencies/dev/internals/alan/tools/pretty-printer")))
-									((alan-file-executable (concat (alan-project-root) ".alan/devenv/platform/project-build-environment/tools/pretty-printer")))))
+									((alan-file-executable (concat (alan-project-root) ".alan/dataenv/platform/project-compiler/tools/pretty-printer")))))
 		(alan-project-language (when alan-language-definition
 								 (or (when (file-name-absolute-p alan-language-definition) alan-language-definition)
 									 (concat (alan-project-root) alan-language-definition)))))
 	(set (make-local-variable 'compilation-error-screen-columns) nil)
 	(cond
 	 ((and alan-project-compiler alan-language-definition)
-	  (set (make-local-variable 'flycheck-alan-executable) alan-project-compiler)
-	  (setq alan--flycheck-language-definition alan-project-language)
-	  (set (make-local-variable 'compile-command)
+	  (setq-local flycheck-alan-executable alan-project-compiler)
+	  (setq-local alan--flycheck-language-definition alan-project-language)
+	  (setq-local compile-command
 		   (concat alan-project-compiler " " alan-project-language " --format emacs --log warning -C " alan-compiler-project-root " /dev/null "))
-	  (setq alan-pretty-printer (concat alan--pretty-printer " " alan-project-language " --format emacs --log warning --allow-unresolved -C " alan-compiler-project-root)))
+	  (setq alan-pretty-printer (concat alan--pretty-printer " " alan-project-language " --format emacs --log warning --allow-unresolved -C " alan-compiler-project-root
+										" --file '" (buffer-file-name) "' -- " (alan--file-path-to-relative-project-path (buffer-file-name)))))
 	 (alan-project-script
-	  (setq flycheck-alan-executable alan-project-script)
-	  (set (make-local-variable 'compile-command) (concat alan-project-script " build --format emacs ")))
-	 (t (message "No alan compiler or script found.")))))
+	  (setq-local flycheck-alan-executable alan-project-script))
+	 (t (message "No alan compiler or script found.")))
+	(when alan-project-script
+	  (setq-local compile-command (concat alan-project-script " build --format emacs ")))))
+
+(defun alan--file-path-to-relative-project-path (file)
+  "Converts the FILE name to a relative project path as used in
+the project compiler."
+  (s-join " " (cl-mapcar (lambda (s) (s-wrap s "'" ) ) (s-split "/" (file-relative-name file  alan-compiler-project-root)))))
 
 ;;; Modes
 
