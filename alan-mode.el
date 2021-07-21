@@ -170,6 +170,9 @@ BODY can define keyword aguments.
 :propertize-rules
 	A list of rules used by `syntax-propertize-rules' When set will set the
 	propertize function for this mode.
+:pretty-print
+	When non nil enables pretty printing when 'alan-language and 'pretty-printer
+	are set.
 
 The rest of the BODY is evaluated in the body of the derived-mode.
 Optional argument DOCSTRING for the major mode."
@@ -192,7 +195,8 @@ Optional argument DOCSTRING for the major mode."
 		 (language)
 		 (build-dir)
 		 (pairs '())
-		 (propertize-rules))
+		 (propertize-rules)
+		 (pretty-print))
 
 	;; Process the keyword args.
     (while (keywordp (car body))
@@ -203,6 +207,7 @@ Optional argument DOCSTRING for the major mode."
 		(`:pairs (setq pairs (pop body)))
 		(`:build-dir (setq build-dir (pop body)))
 		(`:propertize-rules (setq propertize-rules (pop body)))
+		(`:pretty-print (setq pretty-print (pop body)))
 		(_ (pop body))))
 
 	(when keywords
@@ -242,6 +247,9 @@ Optional argument DOCSTRING for the major mode."
 		 ,(when propertize-rules
 			`(progn
 			   (set (make-local-variable 'syntax-propertize-function) (syntax-propertize-rules ,@propertize-rules))))
+		 ,(when pretty-print
+			`(progn
+			   (setq alan-pretty-print t)))
 		 ,@body))))
 
 ;;; Xref backend
@@ -564,6 +572,9 @@ Return nil if the script can not be found."
 (defvar-local alan-pretty-printer nil
   "When not empty, the pretty printer executable of the current language.")
 
+(defvar-local alan-pretty-print nil
+  "When non nill try to pretty print the current file.")
+
 (defun alan-setup-build-system ()
   "Setup Flycheck and the `compile-command'."
   (let ((alan-project-script (or (alan-find-alan-script)
@@ -605,6 +616,7 @@ Return nil if the script can not be found."
   :language "dependencies/dev/internals/alan/language"
   :build-dir "../.."
   :pairs (("{" . "}") ("(" . ")"))
+  :pretty-print t
   :keywords ((":\\s-+\\(stategroup\\|component\\|group\\|dictionary\\|densematrix\\|sparsematrix\\|reference\\|integer\\|natural\\|text\\)\\(\\s-+\\|$\\)" 1 font-lock-type-face)
 			 (("deprecated") . font-lock-warning-face)
 			 (("apply" "identical-variant-switch" "key-switch" "narrowest"
@@ -656,6 +668,7 @@ Return nil if the script can not be found."
 	"Major mode for editing Alan grammar files."
   :language "dependencies/dev/internals/alan/language"
   :build-dir "../.."
+  :pretty-print t
   :pairs (("[" . "]") ("{" . "}") ("(" . ")"))
   :keywords (
 			 ("\\s-+\\(reference\\|stategroup\\|component\\|dictionary\\|group\\|integer\\|natural\\|text\\)\\(\\s-+\\|$\\)" 1 font-lock-type-face)
@@ -706,6 +719,8 @@ Return nil if the script can not be found."
 (alan-define-mode alan-application-mode
 	"Major mode for editing Alan application model files."
   :pairs (("{" . "}"))
+  :pretty-print t
+  :language ".alan/devenv/platform/if-types/model/language"
   :keywords (
 			 ("\\(:\\|:=\\)\\s-+\\(stategroup\\|component\\|group\\|file\\|collection\\|command\\|reference-set\\|number\\|text\\)\\(\\s-+\\|$\\)" 2 font-lock-type-face)
 			 (("today" "now" "zero" "true" "false") . font-lock-constant-face)
@@ -753,12 +768,19 @@ Return nil if the script can not be found."
 	"Major mode for editing Alan widget files."
   :file-pattern "widgets/.*\\.alan\\'"
   :pairs (("{" . "}") ("[" . "]"))
-  :keywords ((( "#" "$" "*" "," "->" "."  ".}"  ":" "::" "=>" ">" ">>" "?"  "@"
-				"^" "binding" "configuration" "control" "current" "dictionary"
-				"empty" "engine" "file" "format" "inline" "instruction" "interval"
-				"let" "list" "markup" "number" "on" "set" "state" "stategroup"
-				"static" "switch" "text" "time" "to" "transform" "unconstrained"
-				"view" "widget" "window" "|" ) . font-lock-builtin-face))
+  :pretty-print t
+  :language ".alan/devenv/system-types/webclient/language"
+  :build-dir "../"
+  :keywords ((("#" "$" "(" ")" "*" "," "->" "."  ".key" ":" "::" "=" "==" "=>"
+			  ">" ">>" "?"  "@" "@persist" "[" "]" "^" "any" "argument"
+			  "ascending" "binding" "by" "collection" "configuration" "context"
+			  "control" "current" "default:" "define" "descending" "empty"
+			  "engine" "entry" "false" "file" "format" "ignore" "index" "inline"
+			  "instruction" "interval:" "lazy" "let" "list" "markup" "match"
+			  "number" "on" "phrase" "root" "session" "set" "sort" "state"
+			  "stategroup" "static" "switch" "text" "time" "to" "transform"
+			  "true" "unconstrained" "view" "widget" "window" "{" "|" "}" )
+			  . font-lock-builtin-face))
   :propertize-rules (("\\.\\(}\\)" (1 "_"))))
 
 ;;;###autoload (autoload 'alan-views-mode "alan-mode")
@@ -767,6 +789,7 @@ Return nil if the script can not be found."
   :pairs (("{" . "}") ("[" . "]"))
   :file-pattern "views/.*\\.alan\\'"
   :propertize-rules (("/?%\\(}\\)" (1 "_")))
+  :pretty-print t
   :keywords ((( "$" "%" "%^" "%}" "*" "+" "+^" "-" "->" "."  ".>" ".^" "/%}" "/>"
 				":>" "<" "<<" "<=" "=" "==" ">" ">=" ">>" "?"  "?^" "@" "as"
 				"candidates" "collection" "command" "disabled" "enabled" "entity"
@@ -845,6 +868,7 @@ this to refresh the buffer for example `flycheck-buffer'."
 
 ;;;###autoload (autoload 'alan-migration-mode "alan-mode")
 (alan-define-mode alan-migration-mode
+	:pretty-print t
 	:keywords ((":\\s-+\\(stategroup\\|group\\|collection\\|number\\|text\\|file\\)" 1 font-lock-type-face)
 			   (("-" "->" "," ":" ":(" "?"  "?^" "?^(" "."  ".(" ".^" ".^("
 				".key" "(" ")" "{" "}" "@" "*" "/" "&&" "#" "%" "%(" "%^" "%^("
@@ -862,11 +886,13 @@ this to refresh the buffer for example `flycheck-buffer'."
 
 ;;;###autoload (autoload 'alan-control-mode "alan-mode")
 (alan-define-mode alan-control-mode
+	:pretty-print t
 	:pairs (("{" . "}")))
 
 ;;;###autoload (autoload 'alan-interface-mode "alan-mode")
 (alan-define-mode alan-interface-mode
 	:keywords ((":\\s-+\\(stategroup\\|group\\|collection\\|number\\|text\\|command\\|file\\)" 1 font-lock-type-face))
+	:pretty-print t
 	:pairs (("{" . "}")))
 
 ;;;###autoload (autoload 'alan-translations-mode "alan-mode")
