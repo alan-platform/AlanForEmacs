@@ -283,10 +283,6 @@ word. E.g. '-> stategroup'."
          (car boundary-pair) (cdr boundary-pair)))))
 (put 'identifier 'thing-at-point 'alan-thing-at-point)
 
-;; todo add view definitions
-;; todo add widget definitions
-;; todo add control definitions
-
 (defun alan--xref-backend () 'alan)
 
 (defvar alan--xref-format
@@ -316,6 +312,7 @@ projectile is not available."
 (defun alan--xref-find-definitions (symbol)
   "Find all definitions matching SYMBOL."
   (let ((xrefs)
+		(chopped-symbol (s-chop-prefix "'" (s-chop-suffix "'" symbol)))
 		(project-scope-limit (and
 							  alan-xref-limit-to-project-scope
 							  (alan--projectile-project-root))))
@@ -331,6 +328,10 @@ projectile is not available."
 			  (while (re-search-forward "^\\s-*\\('\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'\\)" nil t)
 				(when (string= (match-string 1) symbol)
 				  (add-to-list 'xrefs (alan--xref-make-xref symbol (alan-guess-type) buffer (match-beginning 1) (alan-path)) t))))))))
+	(when (string-match-p "\\.alan'\\'" symbol)
+	  (dolist (alan-file (split-string (shell-command-to-string (concat "find " alan-compiler-project-root " -type f -name \"*.alan\"")) "\n" t))
+		(when (s-ends-with-p chopped-symbol alan-file)
+		  (add-to-list 'xrefs (xref-make alan-file (xref-make-file-location alan-file 0 0))))))
 	xrefs))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql alan)))
