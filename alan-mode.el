@@ -301,8 +301,8 @@ word. E.g. '-> stategroup'."
 			 (xref-make-buffer-location buffer symbol-position)))
 
 (defun alan--projectile-project-root ()
-  "Finds the project root of a buffer if projectile is available.
-Return default-directory if the buffer is not in a project or
+  "Find the project root of a buffer if projectile is available.
+Return `default-directory' if the buffer is not in a project or
 projectile is not available."
   (if (featurep 'projectile)
 	(let ((projectile-require-project-root nil))
@@ -472,12 +472,12 @@ STATE is the result of the function `parse-partial-sexp'."
     font-lock-comment-face))
 
 (defun alan-update-header ()
-  "Sets the `header-line-format' to `alan-path'."
+  "Set the `header-line-format' to `alan-path'."
   (setq header-line-format (format " %s  " (alan-path)))
   (force-mode-line-update))
 
 (defun alan-throttle (secs function)
-  "Returns the FUNCTION throttled in SECS."
+  "Return the FUNCTION throttled in SECS."
   (lexical-let ((executing nil)
 				(buffer-to-update (current-buffer))
 				(local-secs secs)
@@ -809,9 +809,9 @@ the project compiler."
 
 ;;;###autoload (autoload 'alan-add-to-phrases "alan-mode")
 (defun alan-add-to-phrases()
-  "Adds the identifier at point to the phrases file.
+  "Add the identifier at point to the phrases file.
 
-Runs the hook `alan-on-phrase-added-hook' on success. You can use
+Run the hook `alan-on-phrase-added-hook' on success. You can use
 this to refresh the buffer for example `flycheck-buffer'."
   (interactive)
   (when-let ((identifier (or (thing-at-point 'identifier)
