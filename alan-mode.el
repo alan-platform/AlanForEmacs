@@ -80,8 +80,8 @@ Its value should be one of 'error' 'info' 'quiet' 'warning'."
   "The relative path from the current buffer file to the compilation root of the `alan-compiler'.
 This sets the -C option."
   :type '(string)
-  :safe 'stringp)
-(make-variable-buffer-local 'alan-compiler-project-root)
+  :safe 'stringp
+  :local t)
 
 (defcustom alan-script "alan"
   "The alan build script file."
@@ -95,8 +95,8 @@ Setting this will try to use the `alan-compiler' instead of the
 against the `alan-project-root'."
   :group 'alan
   :type '(string)
-  :safe 'stringp)
-(make-variable-buffer-local 'alan-language-definition)
+  :safe 'stringp
+  :local t)
 
 (defcustom alan-on-phrase-added-hook nil
   "A hook that is run after successfully adding a phrase to
