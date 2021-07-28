@@ -69,6 +69,13 @@ resolved to an existing directory."
   :group 'alan
   :type '(string))
 
+(defcustom alan-log-level "warning"
+  "The log level used by the `alan-compiler' or the `alan-script'
+Its value should be one of 'error' 'info' 'quiet' 'warning'."
+  :group 'alan
+  :type '(string)
+  :risky t)
+
 (defcustom alan-compiler-project-root "."
   "The relative path from the current buffer file to the compilation root of the `alan-compiler'.
 This sets the -C option."
@@ -506,12 +513,18 @@ Do not include /dev/null and only show errors for the current buffer."
 (defvar-local alan--flycheck-language-definition nil
   "The real path to the language definition if `alan-language-definition' can be resolved.")
 
+(progn
+  (when (not (getenv "ALAN_COMPILER_FORMAT"))
+	(setenv "ALAN_COMPILER_FORMAT" "emacs"))
+  (when (not (getenv "ALAN_COMPILER_LOG"))
+	(setenv "ALAN_COMPILER_LOG" alan-log-level)))
+
 (flycheck-define-checker alan
   "An Alan syntax checker."
   :command ("alan"
 			(eval (if (null alan--flycheck-language-definition)
-					  '("build" "--format" "emacs")
-					`(,alan--flycheck-language-definition "--format" "emacs" "--log" "warning" "-C" ,alan-compiler-project-root "/dev/null"))))
+					  '("build")
+					`(,alan--flycheck-language-definition "-C" ,alan-compiler-project-root "/dev/null"))))
   :error-patterns
   ((error line-start (file-name) ":" line ":" column ": error:" (zero-or-one " " (one-or-more digit) ":" (one-or-more digit))
 		  ;; Messages start with a white space after the error.
@@ -593,8 +606,8 @@ Return nil if the script can not be found."
 	  (setq-local flycheck-alan-executable alan-project-compiler)
 	  (setq-local alan--flycheck-language-definition alan-project-language)
 	  (setq-local compile-command
-		   (concat alan-project-compiler " " alan-project-language " --format emacs --log warning -C " alan-compiler-project-root " /dev/null "))
-	  (setq alan-pretty-printer (concat alan--pretty-printer " " alan-project-language " --format emacs --log warning --allow-unresolved -C " alan-compiler-project-root
+		   (concat alan-project-compiler " " alan-project-language " -C " alan-compiler-project-root " /dev/null "))
+	  (setq alan-pretty-printer (concat alan--pretty-printer " " alan-project-language "  --allow-unresolved -C " alan-compiler-project-root
 										" --file '" (buffer-file-name) "' -- " (alan--file-path-to-relative-project-path (buffer-file-name)))))
 	 (alan-project-script
 	  (setq-local flycheck-alan-executable alan-project-script))
