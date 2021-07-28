@@ -70,14 +70,14 @@ resolved to an existing directory."
   :type '(string))
 
 (defcustom alan-log-level "warning"
-  "The log level used by the `alan-compiler' or the `alan-script'
+  "The log level used by the `alan-compiler' or the `alan-script'.
 Its value should be one of 'error' 'info' 'quiet' 'warning'."
   :group 'alan
   :type '(string)
   :risky t)
 
 (defcustom alan-compiler-project-root "."
-  "The relative path from the current buffer file to the compilation root of the `alan-compiler'.
+  "The relative path from current buffer file to Alan project root.
 This sets the -C option."
   :type '(string)
   :safe 'stringp
@@ -90,6 +90,7 @@ This sets the -C option."
 
 (defcustom alan-language-definition nil
   "The Alan language to use.
+
 Setting this will try to use the `alan-compiler' instead of the
 `alan-script'. If the path is relative it will try to resolve it
 against the `alan-project-root'."
@@ -99,8 +100,7 @@ against the `alan-project-root'."
   :local t)
 
 (defcustom alan-on-phrase-added-hook nil
-  "A hook that is run after successfully adding a phrase to
-phrases.alan.
+  "A hook that is run after successfully adding a phrase to phrases.alan.
 
 Used by `alan-views-add-to-phrases'."
   :type 'hook
@@ -113,7 +113,7 @@ Used by `alan-views-add-to-phrases'."
   "A rule that can be added to `electric-layout-rules'.
 
 It can be added locally by adding it to the alan-hook:
-(set (make-variable-buffer-local 'electric-layout-rules) (list alan-add-line-in-braces-rule))")
+\(set (make-variable-buffer-local 'electric-layout-rules) (list alan-add-line-in-braces-rule))")
 
 ;;; Alan mode
 
@@ -544,7 +544,9 @@ Do not include /dev/null and only show errors for the current buffer."
 (defvar-local alan-project-root nil
   "The project root set by function `alan-project-root'.")
 (defun alan-project-root ()
-  "Project root folder determined based on the presence of a project.json or versions.json file.
+  "Project root folder.
+
+Determined based on the presence of a project.json or versions.json file.
 
 If `alan-language-definition' is set prefer to use the
 project.json over versions.json."
