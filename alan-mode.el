@@ -658,7 +658,6 @@ the project compiler."
 			   "variant-switch" "when" "where" "widening" "widens" "widest"
 			   "zero" "{" "|" "||" "}") . font-lock-builtin-face)))
 
-;; TODO do not take keywords that are in comments.
 (defun alan-grammar-update-keyword ()
   "Update the keywords section based on all used keywords in this grammar file."
   (interactive)
@@ -666,20 +665,27 @@ the project compiler."
 	(save-restriction
 	  (widen)
 	  (goto-char (point-min))
-
-	  (let ((keyword-point (re-search-forward "^keywords$"))
-			(root-point (re-search-forward "^root {$"))
-			(root-point-start (match-beginning 0)) ;; because the last search was for root
+	  (let* ((keyword-point (re-search-forward "^keywords$"))
+			(root-point-start (progn (re-search-forward "^root$") (match-beginning 0)))
+			(keywords-with-annotations (mapcar #'cdr (s-match-strings-all
+										"\\('[^']*'\\)\s-*\\(@.*\\)\n"
+										(buffer-substring-no-properties keyword-point root-point-start))))
 			(alan-keywords (list)))
-		(while (re-search-forward "\\[\\(\\s-?'[^'\n]+'\\s-?,?\\)+\\]" nil t)
+		(while (re-search-forward "\\[\\(\\s-?'[^'\n]+'\\s-?,?\\)+\\(?:@.*\\)?\\]" nil t)
 		  (let ((keyword-group (match-string 0))
 				(search-start 0))
 			(while (string-match "'[^']+'" keyword-group search-start)
-			  (add-to-list 'alan-keywords (match-string 0 keyword-group))
+			  (when (null (nth 4 (syntax-ppss))) ;; Check if the match is not inside a comment
+				(push (match-string 0 keyword-group) alan-keywords))
 			  (setq search-start (match-end 0)))))
 		(delete-region (+ 1 keyword-point) root-point-start)
 		(goto-char (+ 1 keyword-point))
-		(insert (string-join (mapcar (lambda (k) (concat "\t" k)) (sort (delete-dups alan-keywords ) 'string<)) "\n"))
+		(dolist (keyword (sort (delete-dups alan-keywords) 'string<))
+		  (let ((keyword-annotation (assoc keyword keywords-with-annotations)))
+			(insert (concat "\t" keyword
+							(when keyword-annotation
+							  (concat " " (car (cdr keyword-annotation))))
+							"\n"))))
 		(insert "\n\n")))))
 
 ;;;###autoload (autoload 'alan-grammar-mode "alan-mode")
