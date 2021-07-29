@@ -1,4 +1,4 @@
-;;; alan-mode.el --- Major mode for editing Alan files
+;;; alan-mode.el --- Major mode for editing Alan files -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2019 Kjerner
 
@@ -44,7 +44,6 @@
 (require 'xref)
 (require 's)
 (require 'seq)
-(require 'cl)
 
 ;;; Code:
 
@@ -318,7 +317,7 @@ projectile is not available."
 
 (defun alan--xref-find-definitions (symbol)
   "Find all definitions matching SYMBOL."
-  (let ((xrefs)
+  (let ((xrefs '())
 		(chopped-symbol (s-chop-prefix "'" (s-chop-suffix "'" symbol)))
 		(project-scope-limit (and
 							  alan-xref-limit-to-project-scope
@@ -334,11 +333,11 @@ projectile is not available."
 			  (goto-char (point-min))
 			  (while (re-search-forward "^\\s-*\\('\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'\\)" nil t)
 				(when (string= (match-string 1) symbol)
-				  (add-to-list 'xrefs (alan--xref-make-xref symbol (alan-guess-type) buffer (match-beginning 1) (alan-path)) t))))))))
+				  (push (alan--xref-make-xref symbol (alan-guess-type) buffer (match-beginning 1) (alan-path)) xrefs))))))))
 	(when (string-match-p "\\.alan'\\'" symbol)
 	  (dolist (alan-file (split-string (shell-command-to-string (concat "find " alan-compiler-project-root " -type f -name \"*.alan\"")) "\n" t))
 		(when (s-ends-with-p chopped-symbol alan-file)
-		  (add-to-list 'xrefs (xref-make alan-file (xref-make-file-location alan-file 0 0))))))
+		  (push (xref-make alan-file (xref-make-file-location alan-file 0 0)) xrefs))))
 	xrefs))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql alan)))
@@ -370,9 +369,7 @@ projectile is not available."
 
 	  (let ((start-indent (current-indentation))
 			(curr-indent (current-indentation))
-			(curr-point (point))
 			(start-line-number (line-number-at-pos)))
-		(defvar new-point)
 		(while (and (not (bobp))
 					(> start-indent 0)
 					(or (not (looking-at "\\s-*'\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'"))
@@ -381,8 +378,7 @@ projectile is not available."
 						(<= start-indent (current-indentation))))
 		  (forward-line -1)
 		  (unless  (looking-at line-to-ignore-regex)
-			(setq curr-indent (min curr-indent (current-indentation))))
-		  (setq new-point (point)))
+			(setq curr-indent (min curr-indent (current-indentation)))))
 		(if
 			(and
 			 (looking-at alan-parent-regexp)
@@ -485,7 +481,7 @@ STATE is the result of the function `parse-partial-sexp'."
 
 (defun alan-throttle (secs function)
   "Return the FUNCTION throttled in SECS."
-  (lexical-let ((executing nil)
+  (let ((executing nil)
 				(buffer-to-update (current-buffer))
 				(local-secs secs)
 				(local-function function))
@@ -735,7 +731,7 @@ the project compiler."
 			(numerical-types (list)))
 		(when numerical-types-point
 		  (while (re-search-forward "^\\s-*'\\([^']*\\)'" nil t)
-			(add-to-list 'numerical-types (match-string 1))))
+			(push (match-string 1) numerical-types)))
 		numerical-types))))
 
 ;;;###autoload (autoload 'alan-application-mode "alan-mode")
