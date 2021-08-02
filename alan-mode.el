@@ -611,7 +611,7 @@ Return nil if the script can not be found."
 	  (setq-local flycheck-alan-executable alan-project-script))
 	 (t (message "No alan compiler or script found.")))
 	(when alan-project-script
-	  (setq-local compile-command (concat alan-project-script " build --format emacs ")))))
+	  (setq-local compile-command (concat alan-project-script " build")))))
 
 (defun alan--file-path-to-relative-project-path (file)
   "Convert the FILE name to a relative project path.
