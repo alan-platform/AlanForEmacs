@@ -527,7 +527,7 @@ Do not include /dev/null and only show errors for the current buffer."
 		  (message (zero-or-more not-newline)
 				   (zero-or-more "\n " (zero-or-more not-newline)))
 		  line-end)
-   (warning line-start (file-name) ":" line ":" column ": warning: " (one-or-more digit) ":" (one-or-more digit)
+   (warning line-start (file-name) ":" line ":" column ": warning:" (zero-or-one " " (one-or-more digit) ":" (one-or-more digit))
 			(message (zero-or-more not-newline)
 					 (zero-or-more "\n " (zero-or-more not-newline)))
 			line-end))
