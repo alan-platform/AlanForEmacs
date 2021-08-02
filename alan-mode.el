@@ -671,7 +671,7 @@ As used in the project compiler."
 										"\\('[^']*'\\)\s-*\\(@.*\\)\n"
 										(buffer-substring-no-properties keyword-point root-point-start))))
 			(alan-keywords (list)))
-		(while (re-search-forward "\\[\\(\\s-?'[^'\n]+'\\s-?,?\\)+\\(?:@.*\\)?\\]" nil t)
+		(while (re-search-forward "\\[\\(\\s-?,?'[^'\n]+'\\s-?,?\\)+\\(?:@.*\\)?\\]" nil t)
 		  (let ((keyword-group (match-string 0))
 				(search-start 0))
 			(while (string-match "'[^']+'" keyword-group search-start)
