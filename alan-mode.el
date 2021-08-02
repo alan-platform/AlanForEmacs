@@ -160,8 +160,8 @@ The mode derives from the generic `alan-mode'.
 
 BODY can define keyword aguments.
 :file-pattern
-	The file pattern to associate with the major mode.  If none is
-	provided it will associate it with NAME.alan.
+	The file pattern to associate with the major mode. If none is provided it
+	will associate it with NAME.alan.
 :keywords
 	A list of cons cells where the first is a regexp or a list of keywords
 	and the second element is the font-face.
@@ -500,7 +500,7 @@ STATE is the result of the function `parse-partial-sexp'."
 
 (defun alan-flycheck-error-filter (error-list)
   "Flycheck error filter for the Alan comopiler.
-Do not include /dev/null and only show errors for the current buffer."
+Exclude '/dev/null' and errors from all buffers but the current buffer from `ERROR-LIST'."
   (seq-remove (lambda (error)
 				(or (string= (flycheck-error-filename error) "/dev/null")
 					(not (string= (flycheck-error-filename error) (buffer-file-name)))))
@@ -598,7 +598,7 @@ Return nil if the script can not be found."
 		(alan-project-language (when alan-language-definition
 								 (or (when (file-name-absolute-p alan-language-definition) alan-language-definition)
 									 (concat (alan-project-root) alan-language-definition)))))
-	(set (make-local-variable 'compilation-error-screen-columns) nil)
+	(setq-local compilation-error-screen-columns nil)
 	(cond
 	 ((and alan-project-compiler alan-language-definition)
 	  (setq-local flycheck-alan-executable alan-project-compiler)
@@ -614,8 +614,8 @@ Return nil if the script can not be found."
 	  (setq-local compile-command (concat alan-project-script " build --format emacs ")))))
 
 (defun alan--file-path-to-relative-project-path (file)
-  "Converts the FILE name to a relative project path as used in
-the project compiler."
+  "Convert the FILE name to a relative project path.
+As used in the project compiler."
   (s-join " " (cl-mapcar (lambda (s) (s-wrap s "'" ) ) (s-split "/" (file-relative-name file  alan-compiler-project-root)))))
 
 ;;; Modes
@@ -666,7 +666,7 @@ the project compiler."
 	  (widen)
 	  (goto-char (point-min))
 	  (let* ((keyword-point (re-search-forward "^keywords$"))
-			(root-point-start (progn (re-search-forward "^root$") (match-beginning 0)))
+			(root-point-start (progn (re-search-forward "^root\\( {\\)?$") (match-beginning 0)))
 			(keywords-with-annotations (mapcar #'cdr (s-match-strings-all
 										"\\('[^']*'\\)\s-*\\(@.*\\)\n"
 										(buffer-substring-no-properties keyword-point root-point-start))))
@@ -684,7 +684,7 @@ the project compiler."
 		  (let ((keyword-annotation (assoc keyword keywords-with-annotations)))
 			(insert (concat "\t" keyword
 							(when keyword-annotation
-							  (concat " " (car (cdr keyword-annotation))))
+							  (concat " " (nth 1 keyword-annotation)))
 							"\n"))))
 		(insert "\n\n")))))
 
