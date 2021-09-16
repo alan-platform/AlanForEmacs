@@ -592,7 +592,7 @@ Return nil if the script can not be found."
   (let ((alan-project-script (or (alan-find-alan-script)
 								 (executable-find alan-script)))
 		(alan-project-compiler (cond ((alan-file-executable (concat (alan-project-root) "dependencies/dev/internals/alan/tools/compiler-project")))
-									 ((alan-file-executable (concat (alan-project-root) ".alan/devenv/platform/project-build-environment/tools/compiler-project")))))
+									 ((alan-file-executable (concat (alan-project-root) ".alan/dataenv/platform/project-compiler/tools/compiler-project")))))
 		(alan--pretty-printer (cond ((alan-file-executable (concat (alan-project-root) "dependencies/dev/internals/alan/tools/pretty-printer")))
 									((alan-file-executable (concat (alan-project-root) ".alan/dataenv/platform/project-compiler/tools/pretty-printer")))))
 		(alan-project-language (when alan-language-definition
