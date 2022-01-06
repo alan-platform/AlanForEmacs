@@ -822,6 +822,8 @@ As used in the project compiler."
   :file-pattern "views/.*\\.alan\\'"
   :propertize-rules (("/?%\\(}\\)" (1 "_")))
   :pretty-print t
+  :language ".alan/devenv/system-types/webclient/language"
+  :build-dir "../"
   :keywords ((( "$" "%" "%^" "%}" "*" "+" "+^" "-" "->" "."  ".>" ".^" "/%}" "/>"
 				":>" "<" "<<" "<=" "=" "==" ">" ">=" ">>" "?"  "?^" "@" "as"
 				"candidates" "collection" "command" "disabled" "enabled" "entity"
