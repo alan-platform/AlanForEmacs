@@ -596,29 +596,30 @@ Return nil if the script can not be found."
 
 (defun alan-setup-build-system ()
   "Setup Flycheck and the `compile-command'."
-  (let ((alan-project-script (or (alan-find-alan-script)
-								 (executable-find alan-script)))
-		(alan-project-compiler (cond ((alan-file-executable (concat (alan-project-root) "dependencies/dev/internals/alan/tools/compiler-project")))
-									 ((alan-file-executable (concat (alan-project-root) ".alan/dataenv/platform/project-compiler/tools/compiler-project")))))
-		(alan--pretty-printer (cond ((alan-file-executable (concat (alan-project-root) "dependencies/dev/internals/alan/tools/pretty-printer")))
-									((alan-file-executable (concat (alan-project-root) ".alan/dataenv/platform/project-compiler/tools/pretty-printer")))))
-		(alan-project-language (when alan-language-definition
-								 (or (when (file-name-absolute-p alan-language-definition) alan-language-definition)
-									 (concat (alan-project-root) alan-language-definition)))))
-	(setq-local compilation-error-screen-columns nil)
-	(cond
-	 ((and alan-project-compiler alan-language-definition)
-	  (setq-local flycheck-alan-executable alan-project-compiler)
-	  (setq-local alan--flycheck-language-definition alan-project-language)
-	  (setq-local compile-command
-		   (concat alan-project-compiler " " alan-project-language " -C " alan-compiler-project-root " /dev/null "))
-	  (setq alan-pretty-printer (concat alan--pretty-printer " " alan-project-language "  --allow-unresolved -C " alan-compiler-project-root
-										" --file '" (buffer-file-name) "' -- " (alan--file-path-to-relative-project-path (buffer-file-name)))))
-	 (alan-project-script
-	  (setq-local flycheck-alan-executable alan-project-script))
-	 (t (message "No alan compiler or script found.")))
-	(when alan-project-script
-	  (setq-local compile-command (concat alan-project-script " build")))))
+  (if (buffer-file-name)
+	  (let ((alan-project-script (or (alan-find-alan-script)
+									 (executable-find alan-script)))
+			(alan-project-compiler (cond ((alan-file-executable (concat (alan-project-root) "dependencies/dev/internals/alan/tools/compiler-project")))
+										 ((alan-file-executable (concat (alan-project-root) ".alan/dataenv/platform/project-compiler/tools/compiler-project")))))
+			(alan--pretty-printer (cond ((alan-file-executable (concat (alan-project-root) "dependencies/dev/internals/alan/tools/pretty-printer")))
+										((alan-file-executable (concat (alan-project-root) ".alan/dataenv/platform/project-compiler/tools/pretty-printer")))))
+			(alan-project-language (when alan-language-definition
+									 (or (when (file-name-absolute-p alan-language-definition) alan-language-definition)
+										 (concat (alan-project-root) alan-language-definition)))))
+		(setq-local compilation-error-screen-columns nil)
+		(cond
+		 ((and alan-project-compiler alan-language-definition)
+		  (setq-local flycheck-alan-executable alan-project-compiler)
+		  (setq-local alan--flycheck-language-definition alan-project-language)
+		  (setq-local compile-command
+					  (concat alan-project-compiler " " alan-project-language " -C " alan-compiler-project-root " /dev/null "))
+		  (setq alan-pretty-printer (concat alan--pretty-printer " " alan-project-language "  --allow-unresolved -C " alan-compiler-project-root
+											" --file '" (buffer-file-name) "' -- " (alan--file-path-to-relative-project-path (buffer-file-name)))))
+		 (alan-project-script
+		  (setq-local flycheck-alan-executable alan-project-script))
+		 (t (message "No alan compiler or script found.")))
+		(when alan-project-script
+		  (setq-local compile-command (concat alan-project-script " build"))))))
 
 (defun alan--file-path-to-relative-project-path (file)
   "Convert the FILE name to a relative project path.
