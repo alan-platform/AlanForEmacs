@@ -105,6 +105,13 @@ Used by `alan-views-add-to-phrases'."
   :type 'hook
   :group 'alan)
 
+(defcustom alan-on-phrase-removed-hook nil
+  "A hook that is run after successfully removing a phrase from phrases.alan.
+
+Used by `alan-views-remove-from-phrases'."
+  :type 'hook
+  :group 'alan)
+
 (defconst alan-add-line-in-braces-rule
   '(?\n . (lambda () (when (and (derived-mode-p 'alan-mode)
 					 (looking-back "\\s(\\s-*\n\\s-*") (looking-at-p "\\s)"))
@@ -862,6 +869,38 @@ this to refresh the buffer for example `flycheck-buffer'."
 			   (directory-files (concat phrases-directory "/translations/") nil "\.alan$" t))
 			  t)))
 	  (run-hooks 'alan-on-phrase-added-hook))))
+
+;;;###autoload (autoload 'alan-add-to-phrases "alan-mode")
+(defun alan-remove-from-phrases()
+  "Remove the identifier at point from the phrases file.
+
+Run the hook `alan-on-phrase-removed-hook' on success. You can use
+this to refresh the buffer for example `flycheck-buffer'."
+  (interactive)
+  (when-let ((identifier (or (thing-at-point 'identifier)
+							 (save-excursion
+							   ;; errors are reported starting at the quote of
+							   ;; an identifier.  but thing at point starts
+							   ;; after the quote. So try to see if the
+							   ;; identifier is after the quote.
+							   (when (looking-at "'")
+								 (forward-char)
+								 (thing-at-point 'identifier)))))
+			 (phrases-directory (file-name-directory buffer-file-name))
+			 (phrases-buffer (find-file-noselect (concat phrases-directory "phrases.alan"))))
+	(kill-whole-line)
+	(save-buffer)
+	(mapc
+	 (lambda (translation-buffer-name)
+	   (let ((translation-buffer (find-file-noselect (concat phrases-directory "/translations/" translation-buffer-name))))
+		 (with-current-buffer translation-buffer
+		   (goto-char (point-min))
+		   (when (search-forward identifier nil t)
+			 (kill-whole-line)
+			 (save-buffer)
+			 (bury-buffer translation-buffer)))))
+	 (directory-files (concat phrases-directory "/translations/") nil "\.alan$" t))
+	(run-hooks 'alan-on-phrase-removed-hook)))
 
 ;;;###autoload (autoload 'alan-wiring-mode "alan-mode")
 (alan-define-mode alan-wiring-mode
