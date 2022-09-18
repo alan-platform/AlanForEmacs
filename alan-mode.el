@@ -343,8 +343,8 @@ projectile is not available."
 				  (push (alan--xref-make-xref symbol (alan-guess-type) buffer (match-beginning 1) (alan-path)) xrefs))))))))
 	(when (string-match-p "\\.alan'\\'" symbol)
 	  (dolist (alan-file (split-string (shell-command-to-string (concat "find " alan-compiler-project-root " -type f -name \"*.alan\"")) "\n" t))
-		(when (s-ends-with-p chopped-symbol alan-file)
-		  (push (xref-make alan-file (xref-make-file-location alan-file 0 0)) xrefs))))
+		(when (s-equals-p chopped-symbol (file-name-nondirectory alan-file))
+		  (push (xref-make alan-file (xref-make-file-location alan-file 1 0)) xrefs))))
 	xrefs))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql alan)))
