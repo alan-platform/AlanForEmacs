@@ -124,7 +124,8 @@ It can be added locally by adding it to the alan-hook:
 ;;; Alan mode
 
 (defvar-local alan-mode-font-lock-keywords
-  '((("'\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'" . font-lock-variable-name-face))
+  '((("'\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'" . font-lock-variable-name-face)
+	 ("^///.*$" 0 'font-lock-doc-face t))
 	nil nil nil nil
 	(font-lock-syntactic-face-function . alan-font-lock-syntactic-face-function))
   "Highlighting for alan mode")
