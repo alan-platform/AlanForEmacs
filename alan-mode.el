@@ -143,6 +143,11 @@ It can be added locally by adding it to the alan-hook:
 	alan-mode-syntax-table)
   "Syntax table for ‘alan-mode’.")
 
+(defvar alan-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c'" 'alan-edit-documentation)
+    map))
+
 ;;;###autoload
 (define-derived-mode alan-mode prog-mode "Alan"
   "Major mode for editing Alan files."
@@ -205,6 +210,7 @@ Optional argument DOCSTRING for the major mode."
 		 (file-pattern ;; the naming convention for the file pattern is to use underscores.
 		  (concat (s-replace "-" "_" language-name) "\\.alan\\'"))
 		 (syntax-table-name (intern (concat (symbol-name name) "-syntax-table")))
+		 (keymap-name (intern (concat (symbol-name name) "-map")))
 		 (keywords)
 		 (language)
 		 (build-dir)
@@ -238,6 +244,11 @@ Optional argument DOCSTRING for the major mode."
 	   (defvar ,syntax-table-name
 		 (make-syntax-table alan-mode-syntax-table)
 		 ,(concat "Syntax table for ‘" (symbol-name name)  "’."))
+
+	   (defvar ,keymap-name
+		 (let ((map (make-sparse-keymap)))
+		   (set-keymap-parent map alan-mode-map)
+		   map))
 
 	   (define-derived-mode ,name alan-mode ,language-name
 		 ,docstring
@@ -757,7 +768,7 @@ As used in the project compiler."
   :language ".alan/devenv/platform/if-types/model/language"
   :keywords (
 			 ("\\(:\\|:=\\)\\s-+\\(stategroup\\|component\\|group\\|file\\|collection\\|command\\|reference-set\\|number\\|text\\)\\(\\s-+\\|$\\)" 2 font-lock-type-face)
-			 (("today" "now" "zero" "true" "false") . font-lock-constant-face)
+			 (("today" "now" "zero" "true" "false" "node" "none") . font-lock-constant-face)
 			 (("@ascending:" "@breakout" "@date" "@date-time" "@default:"
 			 "@descending:" "@description:" "@desired" "@dormant" "@duration:"
 			 "@factor:" "@hidden" "@icon:" "@identifying" "@label:"
@@ -969,6 +980,109 @@ this to refresh the buffer for example `flycheck-buffer'."
 
 ;;;###autoload (autoload 'alan-phrases-mode "alan-mode")
 (alan-define-mode alan-phrases-mode)
+
+(defun alan--documentation-p()
+  "Checks if point is on documentation."
+  (save-mark-and-excursion
+	(move-beginning-of-line 1)
+	(looking-at "^///")))
+
+(defun alan-mark-documentation ()
+  "Set the selected region to the current documentation block."
+  (interactive)
+  (when (alan--documentation-p)
+	(save-restriction
+	  (widen)
+	  (let ((doc-point-begin (move-beginning-of-line 1)))
+	  (while (and (not (bobp))
+				  (save-mark-and-excursion
+					(next-line -1)
+					(alan--documentation-p)))
+		(move-beginning-of-line 0))
+	  (setq doc-point-begin (point))
+	  (while (and (not (eobp))
+				 (save-mark-and-excursion
+				   (next-line 1)
+				   (alan--documentation-p)))
+		(move-end-of-line 2))
+	  (move-end-of-line 1)
+	  (push-mark nil t t)
+	  (goto-char doc-point-begin)))))
+
+(defun alan-edit-documentation ()
+  "Edit the documentation of an Alan file."
+  (interactive)
+  (when (alan--documentation-p)
+	(alan-mark-documentation)
+	(let ((this-buffer (current-buffer))
+		  (documentation-content
+		   (mapconcat 'identity
+					  (mapcar (lambda (s)
+								(replace-regexp-in-string "^///\\s-?" "" s))
+							  (split-string (buffer-substring (region-beginning) (region-end)) "\n"))
+					  "\n"))
+		  (beginning-of-documentation (point))
+		  (documentation-buffer (switch-to-buffer-other-window (s-concat "Alan doc [" (buffer-name) "]"))))
+	  (funcall alan-documentation-major-mode)
+	  (alan-documentation-mode 1)
+	  (setq alan-documentation-associated-buffer this-buffer)
+	  (setq alan-documentation-source-location beginning-of-documentation)
+	  (mark-whole-buffer)
+	  (delete-active-region)
+	  (insert documentation-content))))
+
+(defvar alan-documentation-major-mode
+  #'markdown-mode
+  "The major mode to use when editing Alan documentation.")
+
+(defun alan-documentation-sync-buffer ()
+  "Synchronise the content of the documentation buffer with the source Alan file."
+  (interactive)
+  (when-let ((alan-buffer-point alan-documentation-source-location)
+			 (new-alan-documentation
+			  (mapconcat 'identity
+						 (mapcar (lambda (s)
+								   (concat "/// " s))
+								 (split-string (buffer-string) "\n"))
+						 "\n")))
+	(with-current-buffer alan-documentation-associated-buffer
+	  (goto-char alan-buffer-point)
+	  (alan-mark-documentation)
+	  (delete-active-region)
+	  (insert new-alan-documentation))))
+
+(defun alan-documentation-exit ()
+  "Kill the dedicated documentation buffer and update the source
+buffer."
+  (interactive)
+  (alan-documentation-sync-buffer)
+  (alan-documentation-abort))
+
+(defun alan-documentation-abort ()
+  "Close the documentation buffer without saving."
+  (interactive)
+  (with-current-buffer alan-documentation-associated-buffer
+	(deactivate-mark))
+  (kill-buffer-and-window))
+
+(defvar alan-documentation-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-c'" 'alan-documentation-exit)
+	(define-key map "\C-c\C-k" 'alan-documentation-abort)
+	(define-key map "\C-x\C-s" 'alan-documentation-sync-buffer)
+    map))
+
+(defvar-local alan-documentation-associated-buffer
+  nil
+  "The source buffer of the Alan documentation buffer.")
+
+(defvar-local alan-documentation-source-location
+  nil
+  "The location of the documentation in the source buffer.")
+
+(define-minor-mode alan-documentation-mode
+  "Minor mode for editing Alan documentation buffers."
+  :interactive nil)
 
 (provide 'alan-mode)
 
