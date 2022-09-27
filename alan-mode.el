@@ -125,7 +125,7 @@ It can be added locally by adding it to the alan-hook:
 
 (defvar-local alan-mode-font-lock-keywords
   '((("'\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'" . font-lock-variable-name-face)
-	 ("^///.*$" 0 'font-lock-doc-face t))
+	 ("^\\s-*///.*$" 0 'font-lock-doc-face t))
 	nil nil nil nil
 	(font-lock-syntactic-face-function . alan-font-lock-syntactic-face-function))
   "Highlighting for alan mode")
@@ -981,11 +981,13 @@ this to refresh the buffer for example `flycheck-buffer'."
 ;;;###autoload (autoload 'alan-phrases-mode "alan-mode")
 (alan-define-mode alan-phrases-mode)
 
+;; Alan documentation mode
+
 (defun alan--documentation-p()
   "Checks if point is on documentation."
   (save-mark-and-excursion
 	(move-beginning-of-line 1)
-	(looking-at "^///")))
+	(looking-at "^\\s-*///")))
 
 (defun alan-mark-documentation ()
   "Set the selected region to the current documentation block."
@@ -1018,7 +1020,7 @@ this to refresh the buffer for example `flycheck-buffer'."
 		  (documentation-content
 		   (mapconcat 'identity
 					  (mapcar (lambda (s)
-								(replace-regexp-in-string "^///\\s-?" "" s))
+								(replace-regexp-in-string "^\\s-*///\\s-?" "" s))
 							  (split-string (buffer-substring (region-beginning) (region-end)) "\n"))
 					  "\n"))
 		  (beginning-of-documentation (point))
