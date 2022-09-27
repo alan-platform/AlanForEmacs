@@ -1082,9 +1082,26 @@ buffer."
   nil
   "The location of the documentation in the source buffer.")
 
+(defface alan-documentation-link '((t :inherit link))
+  "Face for links.")
+
+(defconst alan-documentation-include-link-regex
+  "<<INCLUDE-ALAN\\[\\(.*\\)]>>")
+
+(defun alan-documentation-include-link-p ()
+  "Return non nul when `point' is a an alan link"
+  (thing-at-point-looking-at alan-documentation-include-link-regex))
+
+(defun alan-documentation-follow-include-link-at-point ()
+  "Follow Alan documentation links."
+  (interactive)
+  (when (alan-documentation-include-link-p)
+	(find-file (match-string-no-properties 1))))
+
 (define-minor-mode alan-documentation-mode
   "Minor mode for editing Alan documentation buffers."
-  :interactive nil)
+  :interactive nil
+  (font-lock-add-keywords nil '(("<<INCLUDE-ALAN\\[\\(.*\\)]>>" 1 'alan-documentation-link t))))
 
 (provide 'alan-mode)
 
