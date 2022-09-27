@@ -1065,7 +1065,7 @@ buffer."
   (interactive)
   (with-current-buffer alan-documentation-associated-buffer
 	(deactivate-mark))
-  (kill-buffer-and-window))
+  (quit-window t))
 
 (defvar alan-documentation-mode-map
   (let ((map (make-sparse-keymap)))
