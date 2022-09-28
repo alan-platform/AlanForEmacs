@@ -1109,7 +1109,8 @@ buffer."
 (define-minor-mode alan-documentation-mode
   "Minor mode for editing Alan documentation buffers."
   :interactive nil
-  (font-lock-add-keywords nil '(("<<INCLUDE-ALAN\\[\\(.*\\)]>>" 1 'alan-documentation-link t))))
+  (font-lock-add-keywords nil '(("<<INCLUDE-ALAN\\[\\(.*\\)]>>" 1 'alan-documentation-link t)))
+  (hack-dir-local-variables-non-file-buffer))
 
 (provide 'alan-mode)
 
