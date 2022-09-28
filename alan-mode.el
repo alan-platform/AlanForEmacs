@@ -1015,37 +1015,47 @@ this to refresh the buffer for example `flycheck-buffer'."
   "Edit the documentation of an Alan file."
   (interactive)
   (when (alan--documentation-p)
-	(alan-mark-documentation)
-	(let ((this-buffer (current-buffer))
-		  (documentation-content
-		   (mapconcat 'identity
-					  (mapcar (lambda (s)
-								(replace-regexp-in-string "^\\s-*///\\s-?" "" s))
-							  (split-string (buffer-substring (region-beginning) (region-end)) "\n"))
-					  "\n"))
-		  (beginning-of-documentation (point))
-		  (doc-indentation (or (progn (looking-at "^\\(\\s-*\\)///") (match-string 1)) "")))
-	  (deactivate-mark)
-	  (switch-to-buffer-other-window (s-concat "Alan doc [" (buffer-name) "]"))
-	  (funcall alan-documentation-major-mode)
-	  (alan-documentation-mode 1)
-	  (setq alan-documentation-update
-			(lambda (updated-documentation)
-			  (let ((new-alan-documentation
-					 (mapconcat 'identity
-								(mapcar (lambda (s)
-										  (concat doc-indentation "/// " s))
-										(split-string updated-documentation "\n"))
-								"\n")))
-				(with-current-buffer this-buffer
-				  (goto-char beginning-of-documentation)
-				  (alan-mark-documentation)
-				  (delete-active-region)
-				  (deactivate-mark)
-				  (insert new-alan-documentation)))))
-	  (mark-whole-buffer)
-	  (delete-active-region)
-	  (insert documentation-content))))
+	(save-mark-and-excursion
+	  (let* ((this-buffer (current-buffer))
+			 (curr-line (line-number-at-pos))
+			 (curr-col (current-column))
+			 (documentation-content
+			  (progn
+				(alan-mark-documentation)
+				(mapconcat 'identity
+						   (mapcar (lambda (s)
+									 (replace-regexp-in-string "^\\s-*///\\s-?" "" s))
+								   (split-string (buffer-substring (region-beginning) (region-end)) "\n"))
+						   "\n")))
+			 (beginning-of-documentation (point))
+			 (doc-indentation (or (progn (looking-at "^\\(\\s-*\\)///") (match-string 1)) ""))
+			 (begin-of-documentation-offset (save-excursion (goto-char (match-end 0)) (current-column)))
+			 (new-line (+ 1 (- curr-line (line-number-at-pos))))
+			 (new-col (max 0 (- curr-col begin-of-documentation-offset 1))))
+		(switch-to-buffer-other-window (s-concat "Alan doc [" (buffer-name) "]"))
+		(funcall alan-documentation-major-mode)
+		(alan-documentation-mode 1)
+		(setq alan-documentation-update
+			  (lambda (updated-documentation)
+				(let ((new-alan-documentation
+					   (mapconcat 'identity
+								  (mapcar (lambda (s)
+											(concat doc-indentation "/// " s))
+										  (split-string updated-documentation "\n"))
+								  "\n")))
+				  (with-current-buffer this-buffer
+					(save-mark-and-excursion
+					  (goto-char beginning-of-documentation)
+					  (alan-mark-documentation)
+					  (delete-active-region)
+					  (insert new-alan-documentation)
+					  (deactivate-mark))))))
+		(mark-whole-buffer)
+		(delete-active-region)
+		(insert documentation-content)
+		(goto-line new-line)
+		(move-to-column new-col)
+		(deactivate-mark)))))
 
 (defvar-local alan-documentation-update
   nil
