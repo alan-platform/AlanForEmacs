@@ -1024,14 +1024,33 @@ this to refresh the buffer for example `flycheck-buffer'."
 							  (split-string (buffer-substring (region-beginning) (region-end)) "\n"))
 					  "\n"))
 		  (beginning-of-documentation (point))
-		  (documentation-buffer (switch-to-buffer-other-window (s-concat "Alan doc [" (buffer-name) "]"))))
+		  (doc-indentation (or (progn (looking-at "^\\(\\s-*\\)///") (match-string 1)) "")))
+	  (deactivate-mark)
+	  (switch-to-buffer-other-window (s-concat "Alan doc [" (buffer-name) "]"))
 	  (funcall alan-documentation-major-mode)
 	  (alan-documentation-mode 1)
-	  (setq alan-documentation-associated-buffer this-buffer)
-	  (setq alan-documentation-source-location beginning-of-documentation)
+	  (setq alan-documentation-update
+			(lambda (updated-documentation)
+			  (let ((new-alan-documentation
+					 (mapconcat 'identity
+								(mapcar (lambda (s)
+										  (concat doc-indentation "/// " s))
+										(split-string updated-documentation "\n"))
+								"\n")))
+				(with-current-buffer this-buffer
+				  (goto-char beginning-of-documentation)
+				  (alan-mark-documentation)
+				  (delete-active-region)
+				  (deactivate-mark)
+				  (insert new-alan-documentation)))))
 	  (mark-whole-buffer)
 	  (delete-active-region)
 	  (insert documentation-content))))
+
+(defvar-local alan-documentation-update
+  nil
+  "A callback function for the `alan-documentation-mode' to update
+the documentation block.")
 
 (defvar alan-documentation-major-mode
   #'markdown-mode
@@ -1040,18 +1059,7 @@ this to refresh the buffer for example `flycheck-buffer'."
 (defun alan-documentation-sync-buffer ()
   "Synchronise the content of the documentation buffer with the source Alan file."
   (interactive)
-  (when-let ((alan-buffer-point alan-documentation-source-location)
-			 (new-alan-documentation
-			  (mapconcat 'identity
-						 (mapcar (lambda (s)
-								   (concat "/// " s))
-								 (split-string (buffer-string) "\n"))
-						 "\n")))
-	(with-current-buffer alan-documentation-associated-buffer
-	  (goto-char alan-buffer-point)
-	  (alan-mark-documentation)
-	  (delete-active-region)
-	  (insert new-alan-documentation))))
+  (when alan-documentation-update (funcall alan-documentation-update (buffer-string))))
 
 (defun alan-documentation-exit ()
   "Kill the dedicated documentation buffer and update the source
@@ -1063,8 +1071,6 @@ buffer."
 (defun alan-documentation-abort ()
   "Close the documentation buffer without saving."
   (interactive)
-  (with-current-buffer alan-documentation-associated-buffer
-	(deactivate-mark))
   (quit-window t))
 
 (defvar alan-documentation-mode-map
@@ -1073,14 +1079,6 @@ buffer."
 	(define-key map "\C-c\C-k" 'alan-documentation-abort)
 	(define-key map "\C-x\C-s" 'alan-documentation-sync-buffer)
     map))
-
-(defvar-local alan-documentation-associated-buffer
-  nil
-  "The source buffer of the Alan documentation buffer.")
-
-(defvar-local alan-documentation-source-location
-  nil
-  "The location of the documentation in the source buffer.")
 
 (defface alan-documentation-link '((t :inherit link))
   "Face for links.")
