@@ -1103,8 +1103,12 @@ buffer."
 (defun alan-documentation-follow-include-link-at-point ()
   "Follow Alan documentation links."
   (interactive)
-  (when (alan-documentation-include-link-p)
-	(find-file (match-string-no-properties 1))))
+  (when-let ((alan-file (and
+						 (alan-documentation-include-link-p)
+					(match-string-no-properties 1))))
+	(if (file-exists-p alan-file )
+		(find-file alan-file)
+	  (user-error "File not found %s" alan-file))))
 
 (define-minor-mode alan-documentation-mode
   "Minor mode for editing Alan documentation buffers."
