@@ -420,15 +420,30 @@ This uses the `alan-path' function to get its value."
 	(when path
 	  (kill-new path))))
 
+(defmacro alan--save-hs-overlays (&rest body)
+  "Expand all `hideshow' overlays do BODY and then restore the invsible property"
+  `(if (bound-and-true-p hs-minor-mode)
+	   (let ((overlays (overlays-in (point-min) (point-max)))
+			 (hs-overlays (list)))
+		 (dolist  (ov overlays)
+		   (when (overlay-get ov 'hs)
+			 (add-to-list 'hs-overlays ov)
+			 (overlay-put ov 'invisible nil)))
+		 ,@body
+		 (dolist  (ov hs-overlays)
+		   (overlay-put ov 'invisible 'hs)))
+	 (progn ,@body)))
+
 (defun alan-path ()
   "Gives the location as a path of where you are in a file.
 E.g. 'views' . 'queries' . 'context' . 'candidates' . 'of'"
   (let ((path-list '())
 		has-parent)
 	(save-excursion
-	  (while (setq has-parent (alan--has-parent))
-		(goto-char has-parent)
-		(setq path-list (cons (match-string 1) path-list))))
+	  (alan--save-hs-overlays
+	   (while (setq has-parent (alan--has-parent))
+		 (goto-char has-parent)
+		 (setq path-list (cons (match-string 1) path-list)))))
 	(if path-list
 		(mapconcat 'identity path-list ".")
 	  "")))
