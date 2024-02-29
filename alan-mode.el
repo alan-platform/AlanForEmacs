@@ -160,6 +160,8 @@ It can be added locally by adding it to the alan-hook:
   (setq font-lock-defaults alan-mode-font-lock-keywords)
   (setq-local syntax-propertize-function (syntax-propertize-rules
 										  ("\\s-" (0 (when (eq 39 (nth 3 (syntax-ppss))) (string-to-syntax "_"))))))
+  (when (featurep 'projectile)
+	(setq-local projectile-project-root (alan-project-root)))
   (add-hook 'xref-backend-functions #'alan--xref-backend nil t)
   (set (make-local-variable 'indent-line-function) 'alan-mode-indent-line)
   (add-hook 'post-command-hook (alan-throttle 0.5 #'alan-update-header)  nil t)
@@ -573,7 +575,11 @@ Exclude '/dev/null' and errors from all buffers but the current buffer from `ERR
 (defun alan-project-root ()
   "Project root folder.
 
-Determined based on the presence of a project.json or versions.json file.
+Determined by the presence of one of the following files:
+- wiring/wiring.alan for Alan customer projects
+- build.alan for Alan system type
+- versions.json for Alan customer projects (legacy)
+- project.json for Alan system type (legacy)
 
 If `alan-language-definition' is set prefer to use the
 project.json over versions.json."
@@ -581,16 +587,15 @@ project.json over versions.json."
    alan-project-root
    (setq alan-project-root
 		 (expand-file-name
-		  (or (let ((project-files ["versions.json" "project.json"]))
+		  (or (locate-dominating-file default-directory "build.alan")
+			  (locate-dominating-file default-directory "wiring/wiring.alan")
+			  (let ((project-files ["versions.json" "project.json"]))
 				(seq-find
 				 #'stringp
 				 (seq-map (lambda (project-file)
 							(locate-dominating-file default-directory project-file))
 						  ;; Prefer to use project.json if `alan-language-definition' is set.
-						  (if alan-language-definition (seq-reverse project-files) project-files))))
-			  (progn
-				(message  "Couldn't locate project root folder with a versions.json or project.json file. Using' %s' as project root." default-directory)
-				default-directory))))))
+						  (if alan-language-definition (seq-reverse project-files) project-files)))))))))
 
 (defun alan-file-executable (file)
   "Check if FILE is executable and return FILE."
@@ -620,7 +625,7 @@ Return nil if the script can not be found."
 
 (defun alan-setup-build-system ()
   "Setup Flycheck and the `compile-command'."
-  (if (buffer-file-name)
+  (if (and (buffer-file-name) (alan-project-root))
 	  (let ((alan-project-script (or (alan-find-alan-script)
 									 (executable-find alan-script)))
 			(alan-project-compiler (cond ((alan-file-executable (concat (alan-project-root) "dependencies/dev/internals/alan/tools/compiler-project")))
