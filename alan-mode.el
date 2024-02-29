@@ -759,6 +759,7 @@ As used in the project compiler."
   :pairs (("[" . "]") ("(" . ")"))
   :file-pattern "templates/.*\\.alan\\'"
   :build-dir "../../../"
+  :pretty-print t
   :language "dependencies/dev/internals/alan-to-text-transformation/language")
 
 (defun alan-list-nummerical-types ()
@@ -973,6 +974,8 @@ this to refresh the buffer for example `flycheck-buffer'."
 
 ;;;###autoload (autoload 'alan-settings-mode "alan-mode")
 (alan-define-mode alan-settings-mode
+	:pretty-print t
+	:language ".alan/devenv/system-types/auto-webclient/language"
 	:pairs (("{" . "}") ("[" . "]")))
 
 ;;;###autoload (autoload 'alan-control-mode "alan-mode")
