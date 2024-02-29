@@ -297,13 +297,13 @@ word. E.g. '-> stategroup'."
 				   (end (progn (goto-char beginning) (forward-sexp) (point))))
 		  (cons beginning end))))))
 (put 'identifier 'bounds-of-thing-at-point 'alan-boundry-of-identifier-at-point)
-(defun alan-thing-at-point ()
+(defun alan-identifier-at-point ()
   "Find alan variable at point."
   (let ((boundary-pair (bounds-of-thing-at-point 'identifier)))
     (if boundary-pair
         (buffer-substring-no-properties
          (car boundary-pair) (cdr boundary-pair)))))
-(put 'identifier 'thing-at-point 'alan-thing-at-point)
+(put 'identifier 'thing-at-point 'alan-identifier-at-point)
 
 (defun alan--xref-backend () 'alan)
 
