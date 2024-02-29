@@ -356,7 +356,7 @@ projectile is not available."
 	xrefs))
 
 (cl-defmethod xref-backend-identifier-at-point ((_backend (eql alan)))
-  (alan-thing-at-point))
+  (alan-identifier-at-point))
 
 (cl-defmethod xref-backend-definitions ((_backend (eql alan)) symbol)
   (alan--xref-find-definitions symbol))
