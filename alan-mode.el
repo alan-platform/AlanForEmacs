@@ -163,10 +163,7 @@ It can be added locally by adding it to the alan-hook:
   (when (featurep 'projectile)
 	(setq-local projectile-project-root (alan-project-root)))
   (add-hook 'xref-backend-functions #'alan--xref-backend nil t)
-  (set (make-local-variable 'indent-line-function) 'alan-mode-indent-line)
-  (add-hook 'post-command-hook (alan-throttle 0.5 #'alan-update-header)  nil t)
-  (add-hook 'xref-after-jump-hook #'alan-update-header nil t)
-  (setq header-line-format ""))
+  (set (make-local-variable 'indent-line-function) 'alan-mode-indent-line))
 
 (defvar alan-parent-regexp "\\s-*\\('\\([^'\n\\]\\|\\(\\\\'\\)\\|\\\\\\\)*'\\)")
 
@@ -412,7 +409,7 @@ projectile is not available."
 	  (goto-char parent-position))))
 
 (defun alan-copy-path-to-clipboard ()
-  "Copy the path as shown in the header of the buffer.
+  "Copy the path to the current level separated by dots.
 This uses the `alan-path' function to get its value."
   (interactive)
   (let ((path (alan-path)))
@@ -506,28 +503,6 @@ STATE is the result of the function `parse-partial-sexp'."
             nil
 		  font-lock-string-face))
     font-lock-comment-face))
-
-(defun alan-update-header ()
-  "Set the `header-line-format' to `alan-path'."
-  (setq header-line-format (format " %s  " (alan-path)))
-  (force-mode-line-update))
-
-(defun alan-throttle (secs function)
-  "Return the FUNCTION throttled in SECS."
-  (let ((executing nil)
-				(buffer-to-update (current-buffer))
-				(local-secs secs)
-				(local-function function))
-	(lambda ()
-	  (unless executing
-		(setq executing t)
-		(funcall local-function)
-		(run-with-timer
-		 local-secs nil
-		 (lambda ()
-		   (with-current-buffer buffer-to-update
-			 (funcall local-function)
-			 (setq executing nil))))))))
 
 ;;; Flycheck
 
