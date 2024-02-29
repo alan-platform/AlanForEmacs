@@ -632,6 +632,54 @@ Return nil if the script can not be found."
 As used in the project compiler."
   (s-join " " (cl-mapcar (lambda (s) (s-wrap s "'" ) ) (s-split "/" (file-relative-name file  alan-compiler-project-root)))))
 
+;;; lsp-mode
+
+(defcustom alan-lsp-capture-path nil
+  "The path to log trace messages
+E.g. /tmp/alan-lsp-log"
+  :type '(string))
+
+(defun alan-lsp-activate-alan-mode (_file-name _mode)
+	"return t if _MODE derives from alan-mode and a project root can be found."
+	(and (provided-mode-derived-p _mode 'alan-mode)
+		 (alan-lsp--find-command)))
+
+(defun alan-lsp--find-command ()
+  (when-let ((project-root (alan-project-root))
+			 (alan "dependencies/dev/internals/alan/tools/alan")
+			 (fabric ".alan/devenv/platform/project-build-environment/tools/fabric"))
+	(cond ((and (file-exists-p (concat project-root "build.alan"))
+				(alan-file-executable (concat (locate-dominating-file project-root alan) alan))))
+		  ((and (file-exists-p (concat project-root "wiring/wiring.alan"))
+				(alan-file-executable (concat (locate-dominating-file project-root fabric) fabric)))))))
+
+(defun alan-lsp--server-command ()
+  `(,(alan-lsp--find-command) "--lsp" ,@(when alan-lsp-capture-path `("--capture" ,alan-lsp-capture-path))))
+
+(defun alan-setup-lsp ()
+  "Register alan as an LSP client"
+  (add-to-list 'lsp-language-id-configuration '("\\.alan$" . "alan"))
+  (lsp-register-client (make-lsp-client
+						:new-connection (lsp-stdio-connection #'alan-lsp--server-command)
+						:activation-fn #'alan-lsp-activate-alan-mode
+						:server-id 'alan-ls)))
+
+(with-eval-after-load 'lsp-mode
+  (alan-setup-lsp))
+
+;;; eglot
+
+(defun alan-eglot--server-command (&optional is-interactive)
+  "Decides the language server to use."
+  (alan-lsp--server-command))
+
+(defun alan-setup-eglot ()
+  "Register alan as an LSP client"
+  (add-to-list 'eglot-server-programs '(alan-mode . alan-eglot--server-command)))
+
+(with-eval-after-load 'eglot
+  (alan-setup-eglot))
+
 ;;; Modes
 
 (defvar alan-imenu-generic-expression
