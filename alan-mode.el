@@ -158,6 +158,8 @@ It can be added locally by adding it to the alan-hook:
   (setq block-comment-start "/*")
   (setq block-comment-end "*/")
   (setq font-lock-defaults alan-mode-font-lock-keywords)
+  (setq-local syntax-propertize-function (syntax-propertize-rules
+										  ("\\s-" (0 (when (eq 39 (nth 3 (syntax-ppss))) (string-to-syntax "_"))))))
   (add-hook 'xref-backend-functions #'alan--xref-backend nil t)
   (set (make-local-variable 'indent-line-function) 'alan-mode-indent-line)
   (add-hook 'post-command-hook (alan-throttle 0.5 #'alan-update-header)  nil t)
@@ -215,7 +217,6 @@ Optional argument DOCSTRING for the major mode."
 		 (language)
 		 (build-dir)
 		 (pairs '())
-		 (propertize-rules)
 		 (pretty-print))
 
 	;; Process the keyword args.
@@ -226,7 +227,6 @@ Optional argument DOCSTRING for the major mode."
 		(`:language (setq language (pop body)))
 		(`:pairs (setq pairs (pop body)))
 		(`:build-dir (setq build-dir (pop body)))
-		(`:propertize-rules (setq propertize-rules (pop body)))
 		(`:pretty-print (setq pretty-print (pop body)))
 		(_ (pop body))))
 
@@ -269,9 +269,6 @@ Optional argument DOCSTRING for the major mode."
 				 (modify-syntax-entry ,(string-to-char (car pair)) ,(concat "(" (cdr pair)) ,syntax-table-name)
 				 (modify-syntax-entry ,(string-to-char (cdr pair)) ,(concat ")" (car pair)) ,syntax-table-name)))
 			pairs)
-		 ,(when propertize-rules
-			`(progn
-			   (set (make-local-variable 'syntax-propertize-function) (syntax-propertize-rules ,@propertize-rules))))
 		 ,(when pretty-print
 			`(progn
 			   (setq alan-pretty-print t)))
@@ -842,15 +839,13 @@ As used in the project compiler."
 			  "number" "on" "phrase" "root" "session" "set" "sort" "state"
 			  "stategroup" "static" "switch" "text" "time" "to" "transform"
 			  "true" "unconstrained" "view" "widget" "window" "{" "|" "}" )
-			  . font-lock-builtin-face))
-  :propertize-rules (("\\.\\(}\\)" (1 "_"))))
+			  . font-lock-builtin-face)))
 
 ;;;###autoload (autoload 'alan-views-mode "alan-mode")
 (alan-define-mode alan-views-mode
 	"Major mode for editing Alan views files."
   :pairs (("{" . "}") ("[" . "]"))
   :file-pattern "views/.*\\.alan\\'"
-  :propertize-rules (("/?%\\(}\\)" (1 "_")))
   :pretty-print t
   :language ".alan/devenv/system-types/webclient/language"
   :build-dir "../"
