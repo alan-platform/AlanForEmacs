@@ -160,8 +160,6 @@ It can be added locally by adding it to the alan-hook:
   (setq font-lock-defaults alan-mode-font-lock-keywords)
   (setq-local syntax-propertize-function (syntax-propertize-rules
 										  ("\\s-" (0 (when (eq 39 (nth 3 (syntax-ppss))) (string-to-syntax "_"))))))
-  (when (featurep 'projectile)
-	(setq-local projectile-project-root (alan-project-root)))
   (add-hook 'xref-backend-functions #'alan--xref-backend nil t)
   (set (make-local-variable 'indent-line-function) 'alan-mode-indent-line))
 
@@ -571,6 +569,17 @@ project.json over versions.json."
 							(locate-dominating-file default-directory project-file))
 						  ;; Prefer to use project.json if `alan-language-definition' is set.
 						  (if alan-language-definition (seq-reverse project-files) project-files)))))))))
+
+(with-eval-after-load 'projectile
+  (projectile-register-project-type
+   'alan
+   '("build.alan")
+   :project-file "build.alan")
+
+  (projectile-register-project-type
+   'alan-application
+   '( "wiring/wiring.alan")
+   :project-file "wiring/wiring.alan"))
 
 (defun alan-file-executable (file)
   "Check if FILE is executable and return FILE."
