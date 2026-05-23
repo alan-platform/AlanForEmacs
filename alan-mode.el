@@ -44,6 +44,7 @@
 (require 'xref)
 (require 's)
 (require 'seq)
+(require 'treesit nil t)
 
 ;;; Code:
 
@@ -148,6 +149,14 @@ It can be added locally by adding it to the alan-hook:
     (define-key map "\C-c'" 'alan-edit-documentation)
     map))
 
+(defun alan-mode--setup-font-lock ()
+  "Set up font-lock for `alan-mode', using tree-sitter when available."
+  (unless (alan-mode--treesit-setup 'alan_generic)
+    (setq font-lock-defaults alan-mode-font-lock-keywords)
+    (setq-local syntax-propertize-function
+                (syntax-propertize-rules
+                 ("\\s-" (0 (when (eq 39 (nth 3 (syntax-ppss))) (string-to-syntax "_"))))))))
+
 ;;;###autoload
 (define-derived-mode alan-mode prog-mode "Alan"
   "Major mode for editing Alan files."
@@ -157,9 +166,7 @@ It can be added locally by adding it to the alan-hook:
   (setq comment-end "")
   (setq block-comment-start "/*")
   (setq block-comment-end "*/")
-  (setq font-lock-defaults alan-mode-font-lock-keywords)
-  (setq-local syntax-propertize-function (syntax-propertize-rules
-										  ("\\s-" (0 (when (eq 39 (nth 3 (syntax-ppss))) (string-to-syntax "_"))))))
+  (alan-mode--setup-font-lock)
   (add-hook 'xref-backend-functions #'alan--xref-backend nil t)
   (set (make-local-variable 'indent-line-function) 'alan-mode-indent-line))
 
@@ -191,6 +198,12 @@ BODY can define keyword aguments.
 :pretty-print
 	When non nil enables pretty printing when 'alan-language and 'pretty-printer
 	are set.
+:folds
+	A list of additional treesit-fold range rules, as cons cells of (NODE-TYPE . RANGE-FN).
+	These are appended to `alan--treesit-fold-rules' and registered with `treesit-fold-range-alist'
+	for this mode when treesit-fold is loaded.  Omitting :folds registers only the generic
+	rules.  Example:
+	  :folds ((some_block . treesit-fold-range-seq))
 
 The rest of the BODY is evaluated in the body of the derived-mode.
 Optional argument DOCSTRING for the major mode."
@@ -214,7 +227,8 @@ Optional argument DOCSTRING for the major mode."
 		 (language)
 		 (build-dir)
 		 (pairs '())
-		 (pretty-print))
+		 (pretty-print)
+		 (folds))
 
 	;; Process the keyword args.
     (while (keywordp (car body))
@@ -225,6 +239,7 @@ Optional argument DOCSTRING for the major mode."
 		(`:pairs (setq pairs (pop body)))
 		(`:build-dir (setq build-dir (pop body)))
 		(`:pretty-print (setq pretty-print (pop body)))
+		(`:folds (setq folds (pop body)))
 		(_ (pop body))))
 
 	(when keywords
@@ -257,9 +272,6 @@ Optional argument DOCSTRING for the major mode."
 		 ,(when build-dir
 			`(progn
 			   (setq alan-compiler-project-root ,build-dir)))
-		 ,(when keywords
-			`(progn
-			   (font-lock-add-keywords nil ',keywords "at end")))
 		 ,@(mapcar
 			(lambda (pair)
 			  `(progn
@@ -269,7 +281,15 @@ Optional argument DOCSTRING for the major mode."
 		 ,(when pretty-print
 			`(progn
 			   (setq alan-pretty-print t)))
-		 ,@body))))
+		 ,@body
+		 ,(when keywords
+			`(unless treesit-font-lock-settings
+			   (font-lock-add-keywords nil ',keywords "at end"))))
+	   (with-eval-after-load 'treesit-fold
+		 (add-to-list 'treesit-fold-range-alist
+					  (cons ',name ,(if folds
+									   `(append alan--treesit-fold-rules ',folds)
+									 'alan--treesit-fold-rules)))))))
 
 ;;; Xref backend
 
@@ -708,6 +728,84 @@ E.g. /tmp/alan-lsp-log"
 	("number" "^\\s-+'\\(\\(?:\\sw\\|\\s-+\\)*\\)'\\s-+->\\s-* number" 1)
 	("matrix" "^\\s-+'\\(\\(?:\\sw\\|\\s-+\\)*\\)'\\s-+->\\s-* \\(?:dense\\|sparse\\)matrix" 1)))
 
+(defun alan-mode--treesit-feature-list (rules)
+  "Derive a `treesit-font-lock-feature-list' from a flat RULES plist.
+Features are bucketed: comment → level 1, string/identifier → level 2,
+everything else → level 3."
+  (let (features)
+    (let ((rest rules))
+      (while rest
+        (when (eq (car rest) :feature)
+          (push (cadr rest) features))
+        (setq rest (cdr rest))))
+    (let (lvl1 lvl2 lvl3)
+      (dolist (f (nreverse features))
+        (cond ((eq f 'comment)               (push f lvl1))
+              ((memq f '(string identifier)) (push f lvl2))
+              (t                             (push f lvl3))))
+      (let ((l1 (nreverse lvl1)) (l2 (nreverse lvl2)) (l3 (nreverse lvl3)))
+        (if l3 (list l1 l2 l3) (list l1 l2))))))
+
+(defun alan-mode--treesit-setup (language &optional extra-rules folds)
+  "Set up tree-sitter font-lock for LANGUAGE.
+Generic rules are validated with node-valid-p before inclusion.
+EXTRA-RULES is a flat plist of additional args for `treesit-font-lock-rules'
+appended without validation — the caller guarantees these queries succeed.
+FOLDS is a list of additional (NODE-TYPE . RANGE-FN) cons cells registered
+with `treesit-fold-range-alist' for the current major mode."
+  (when (and (featurep 'treesit) (treesit-ready-p language t))
+    (treesit-parser-create language)
+    (let ((rules '()))
+      (cl-flet ((node-valid-p (lang node)
+                  (condition-case nil
+                      (let ((root (treesit-parser-root-node (treesit-parser-create lang))))
+                        (treesit-query-capture root `((,node) @x) 1 2)
+                        t)
+                    (error nil))))
+        (when (node-valid-p language 'alan__comment)
+          (setq rules (append rules
+                              (list :language language :feature 'comment
+                                    (if (node-valid-p language 'alan__doc_comment)
+                                        '((alan__comment) @font-lock-comment-face
+                                          (alan__doc_comment) @font-lock-doc-face)
+                                      '((alan__comment) @font-lock-comment-face))))))
+        (when (node-valid-p language 'alan__text)
+          (setq rules (append rules
+                              (list :language language :feature 'string
+                                    '((alan__text) @font-lock-string-face)))))
+        (when (node-valid-p language 'alan__identifier)
+          (setq rules (append rules
+                              (list :language language :feature 'identifier
+                                    (if (node-valid-p language 'alan__key)
+                                        '((alan__identifier) @font-lock-variable-name-face
+                                          (alan__key) @font-lock-constant-face)
+                                      '((alan__identifier) @font-lock-variable-name-face))))))
+        (when (node-valid-p language 'alan__number)
+          (setq rules (append rules
+                              (list :language language :feature 'number
+                                    '((alan__number) @font-lock-number-face))))))
+      (when extra-rules
+        (setq rules (append rules extra-rules)))
+      (when rules
+        (setq-local treesit-font-lock-settings (apply #'treesit-font-lock-rules rules))
+        (setq-local treesit-font-lock-feature-list (alan-mode--treesit-feature-list rules))
+        (if (fboundp 'treesit-font-lock-enable)
+            (treesit-font-lock-enable)
+          (treesit-major-mode-setup))))
+    (when folds
+      (let ((mode major-mode)
+            (all-folds (append alan--treesit-fold-rules folds)))
+        (when (featurep 'treesit-fold)
+          (add-to-list 'treesit-fold-range-alist (cons mode all-folds)))))
+    t))
+
+(defun alan-schema-mode--setup-tree-sitter ()
+  "Set up tree-sitter using the `alan_meta_schema' parser."
+  (alan-mode--treesit-setup 'alan_meta_schema
+    (list :language 'alan_meta_schema
+          :feature 'type
+          '((d_node_properties (alan__key) type: ":" type: _ @font-lock-type-face)))))
+
 ;;;###autoload (autoload 'alan-schema-mode "alan-mode")
 (alan-define-mode alan-schema-mode
 	"Major mode for editing Alan schema files."
@@ -735,7 +833,8 @@ E.g. /tmp/alan-lsp-log"
 			   "sibling" "sign-switch" "singular" "stategroup" "struct"
 			   "struct-switch" "sum" "switch" "text" "using" "variant"
 			   "variant-switch" "when" "where" "widening" "widens" "widest"
-			   "zero" "{" "|" "||" "}") . font-lock-builtin-face)))
+			   "zero" "{" "|" "||" "}") . font-lock-builtin-face))
+  (alan-schema-mode--setup-tree-sitter))
 
 (defun alan-grammar-update-keyword ()
   "Update the keywords section based on all used keywords in this grammar file."
@@ -786,7 +885,15 @@ E.g. /tmp/alan-lsp-log"
 			   "integer" "keywords" "last" "no" "node" "node-switch" "nodes" "none"
 			   "predecessor" "reference" "root" "set" "stategroup" "static" "successor" "text"
 			   "{" "|" "}"
-			   ) . font-lock-builtin-face)))
+			   ) . font-lock-builtin-face))
+  (alan-mode--treesit-setup 'alan_meta_grammar
+							(list :language 'alan_meta_grammar
+								  :feature 'type
+								  '((d_block_properties type: _ @font-lock-type-face))
+								  :language 'alan_meta_grammar
+								  :feature 'keyword
+								  '((["@trim" "@trim-left" "@trim-right" "@trim-none"] @font-lock-keyword-face)
+									(c_formatting _ @font-lock-keyword-face)))))
 
 (defun alan-template-yank ()
   "Yank but wrap as template."
@@ -805,7 +912,8 @@ E.g. /tmp/alan-lsp-log"
   :file-pattern "templates/.*\\.alan\\'"
   :build-dir "../../../"
   :pretty-print t
-  :language "dependencies/dev/internals/alan-to-text-transformation/language")
+  :language "dependencies/dev/internals/alan-to-text-transformation/language"
+  (alan-mode--treesit-setup 'alan_transformation_template))
 
 (defun alan-list-nummerical-types ()
   "Return a list of all nummerical types."
@@ -819,6 +927,10 @@ E.g. /tmp/alan-lsp-log"
 		  (while (re-search-forward "^\\s-*'\\([^']*\\)'" nil t)
 			(push (match-string 1) numerical-types)))
 		numerical-types))))
+
+(defun alan-application-mode--setup-tree-sitter ()
+  "Set up tree-sitter using the `alan_model_application' parser."
+  (alan-mode--treesit-setup 'alan_model_application))
 
 ;;;###autoload (autoload 'alan-application-mode "alan-mode")
 (alan-define-mode alan-application-mode
@@ -866,7 +978,8 @@ E.g. /tmp/alan-lsp-log"
 			   "sticky" "subtract" "success" "sum" "switch" "text"
 			   "time-in-seconds" "timer" "to-color" "to-text" "today" "union"
 			   "update" "user" "user-initializer:" "users" "walk" "warning"
-			   "where" "with" "{" "|" "||" "}" "~>") . font-lock-builtin-face)))
+			   "where" "with" "{" "|" "||" "}" "~>") . font-lock-builtin-face))
+  (alan-application-mode--setup-tree-sitter))
 
 ;;;###autoload (autoload 'alan-widget-mode "alan-mode")
 (alan-define-mode alan-widget-mode
@@ -1006,6 +1119,7 @@ this to refresh the buffer for example `flycheck-buffer'."
 ;;;###autoload (autoload 'alan-migration-mode "alan-mode")
 (alan-define-mode alan-migration-mode
 	:pretty-print t
+	:pairs (("{" . "}") ("(" . ")"))
 	:keywords ((":\\s-+\\(stategroup\\|group\\|collection\\|number\\|text\\|file\\)" 1 font-lock-type-face)
 			   (("-" "->" "," ":" ":(" "?"  "?^" "?^(" "."  ".(" ".^" ".^("
 				".key" "(" ")" "{" "}" "@" "*" "/" "&&" "#" "%" "%(" "%^" "%^("
@@ -1175,6 +1289,17 @@ buffer."
   :interactive nil
   (font-lock-add-keywords nil '(("<<INCLUDE-ALAN\\[\\(.*\\)]>>" 1 'alan-documentation-link t)))
   (hack-dir-local-variables-non-file-buffer))
+
+;;; Folding
+
+(defconst alan--treesit-fold-rules
+  '((brace_block . treesit-fold-range-seq)
+    (paren_block . treesit-fold-range-seq)
+    (alan__comment . treesit-fold-range-c-like-comment))
+  "treesit-fold rules shared by all Alan modes.")
+
+(with-eval-after-load 'treesit-fold
+  (add-to-list 'treesit-fold-range-alist (cons 'alan-mode alan--treesit-fold-rules)))
 
 (provide 'alan-mode)
 
